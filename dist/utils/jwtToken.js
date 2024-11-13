@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 export const sendToken = (user, statusCode, res) => {
     const token = jwt.sign({
         user,
@@ -24,4 +25,13 @@ export const activationToken = (user) => {
         expiresIn: "1m",
     });
     return { token, activationCode };
+};
+export const getResetPassword = () => {
+    const resetToken = crypto.randomBytes(20).toString("hex");
+    const resetExpire = Date.now() + 15 * 60 * 1000;
+    const resetPasswordToken = crypto
+        .createHash("sha256")
+        .update(resetToken)
+        .digest("hex");
+    return { resetExpire, resetToken, resetPasswordToken };
 };

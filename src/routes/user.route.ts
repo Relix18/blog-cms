@@ -1,14 +1,29 @@
 import { Router } from "express";
 import {
   activateUser,
+  forgotPassword,
+  getUser,
   login,
+  logout,
   register,
+  resetPassword,
+  socialAuth,
+  updatePassword,
+  updateProfile,
 } from "../controllers/user.controller.js";
+import { isAuthenticated } from "../middlewares/auth.js";
 
 const router = Router();
 
 router.post("/register", register);
 router.post("/activation", activateUser);
 router.post("/login", login);
+router.get("/logout", logout);
+router.post("/social", socialAuth);
+router.post("/forget-password", forgotPassword);
+router.post("/reset-password/:token", resetPassword);
+router.get("/me", isAuthenticated, getUser);
+router.put("/update-profile", isAuthenticated, updateProfile);
+router.put("/update-password", isAuthenticated, updatePassword);
 
 export default router;

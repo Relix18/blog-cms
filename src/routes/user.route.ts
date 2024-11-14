@@ -1,8 +1,11 @@
 import { Router } from "express";
 import {
   activateUser,
+  deleteUser,
   forgotPassword,
+  getAllUser,
   getUser,
+  getUserDetails,
   login,
   logout,
   register,
@@ -10,8 +13,9 @@ import {
   socialAuth,
   updatePassword,
   updateProfile,
+  updateRole,
 } from "../controllers/user.controller.js";
-import { isAuthenticated } from "../middlewares/auth.js";
+import { isAdmin, isAuthenticated } from "../middlewares/auth.js";
 
 const router = Router();
 
@@ -25,5 +29,9 @@ router.post("/reset-password/:token", resetPassword);
 router.get("/me", isAuthenticated, getUser);
 router.put("/update-profile", isAuthenticated, updateProfile);
 router.put("/update-password", isAuthenticated, updatePassword);
+router.get("/get-all-users", isAuthenticated, isAdmin, getAllUser);
+router.put("/update-role/:id", isAuthenticated, isAdmin, updateRole);
+router.get("/user-details/:id", isAuthenticated, isAdmin, getUserDetails);
+router.delete("/delete-user/:id", isAuthenticated, isAdmin, deleteUser);
 
 export default router;

@@ -9,3 +9,9 @@ export interface IUser {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface IRegistration {
+  name: string;
+  email: string;
+  password: string;
+}

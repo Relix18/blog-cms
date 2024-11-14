@@ -267,3 +267,65 @@ export const updatePassword = TryCatch(async (req, res, next) => {
         .status(200)
         .json({ success: true, message: "Password updated successfully" });
 });
+// Admin
+export const getAllUser = TryCatch(async (req, res, next) => {
+    const users = await prisma.user.findMany();
+    res.status(200).json({
+        success: true,
+        users,
+    });
+});
+export const getUserDetails = TryCatch(async (req, res, next) => {
+    const id = req.params.id;
+    const user = await prisma.user.findUnique({
+        where: { id },
+        include: {
+            posts: true,
+            profile: true,
+        },
+    });
+    if (!user) {
+        return next(new ErrorHandler(404, "User not found"));
+    }
+    res.status(200).json({
+        success: true,
+        user,
+    });
+});
+export const updateRole = TryCatch(async (req, res, next) => {
+    const id = req.params.id;
+    const { role } = req.body;
+    const user = await prisma.user.findUnique({
+        where: { id },
+    });
+    if (!user) {
+        return next(new ErrorHandler(404, "User not found"));
+    }
+    await prisma.user.update({
+        where: { id },
+        data: {
+            role,
+        },
+    });
+    res.status(200).json({
+        success: true,
+        message: "Role updated successfully",
+    });
+});
+export const deleteUser = TryCatch(async (req, res, next) => {
+    const id = req.params.id;
+    const user = await prisma.user.findUnique({
+        where: { id },
+    });
+    if (!user) {
+        return next(new ErrorHandler(404, "User not found"));
+    }
+    await prisma.user.delete({
+        where: { id },
+        include: { profile: true },
+    });
+    res.status(200).json({
+        success: true,
+        message: "User deleted successfully",
+    });
+});

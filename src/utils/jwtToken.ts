@@ -1,5 +1,5 @@
 import jwt, { Secret } from "jsonwebtoken";
-import { IRegistration } from "../controllers/user.controller";
+import { IRegistration } from "../types/types.js";
 import { Response } from "express";
 import { IUser } from "../types/types";
 import crypto from "crypto";

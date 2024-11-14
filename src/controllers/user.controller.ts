@@ -10,13 +10,7 @@ import {
 } from "../utils/jwtToken.js";
 import jwt, { Secret } from "jsonwebtoken";
 import crypto from "crypto";
-
-//Register a User
-export interface IRegistration {
-  name: string;
-  email: string;
-  password: string;
-}
+import { IRegistration } from "../types/types.js";
 
 export const register = TryCatch(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -375,5 +369,91 @@ export const updatePassword = TryCatch(
     res
       .status(200)
       .json({ success: true, message: "Password updated successfully" });
+  }
+);
+
+// Admin
+
+export const getAllUser = TryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const users = await prisma.user.findMany();
+
+    res.status(200).json({
+      success: true,
+      users,
+    });
+  }
+);
+
+export const getUserDetails = TryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const id = req.params.id;
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: {
+        posts: true,
+        profile: true,
+      },
+    });
+
+    if (!user) {
+      return next(new ErrorHandler(404, "User not found"));
+    }
+
+    res.status(200).json({
+      success: true,
+      user,
+    });
+  }
+);
+
+export const updateRole = TryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const id = req.params.id;
+    const { role } = req.body;
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!user) {
+      return next(new ErrorHandler(404, "User not found"));
+    }
+
+    await prisma.user.update({
+      where: { id },
+      data: {
+        role,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Role updated successfully",
+    });
+  }
+);
+
+export const deleteUser = TryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const id = req.params.id;
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!user) {
+      return next(new ErrorHandler(404, "User not found"));
+    }
+
+    await prisma.user.delete({
+      where: { id },
+      include: { profile: true },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "User deleted successfully",
+    });
   }
 );

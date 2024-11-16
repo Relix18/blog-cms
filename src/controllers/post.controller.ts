@@ -4,6 +4,7 @@ import { IPost } from "../types/types";
 import ErrorHandler from "../utils/errorHandler.js";
 import prisma from "../lib/db.js";
 
+//Author
 export const createPost = TryCatch(
   async (req: Request, res: Response, next: NextFunction) => {
     const {
@@ -109,9 +110,13 @@ export const getAuthorPost = TryCatch(
     const post = await prisma.post.findMany({
       where: { authorId: user.id },
       include: {
-        comments: {
-          include: {
-            replies: true,
+        categories: {
+          select: {
+            category: {
+              select: {
+                name: true,
+              },
+            },
           },
         },
       },
@@ -124,8 +129,106 @@ export const getAuthorPost = TryCatch(
   }
 );
 
+export const getAuthorSinglePost = TryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const slug = req.params.slug;
+
+    const post = await prisma.post.findUnique({
+      where: { slug },
+      include: {
+        categories: {
+          select: {
+            category: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        comments: {
+          include: {
+            replies: true,
+          },
+        },
+      },
+    });
+
+    if (!post) {
+      return next(new ErrorHandler(404, "Post not found"));
+    }
+
+    res.status(200).json({
+      success: true,
+      post,
+    });
+  }
+);
+
 export const updatePost = TryCatch(
-  async (req: Request, res: Response, next: NextFunction) => {}
+  async (req: Request, res: Response, next: NextFunction) => {
+    const id = req.params.id;
+    const postId = parseInt(id);
+    const {
+      title,
+      slug,
+      content,
+      categories,
+      featuredImage,
+      metaTitle,
+      metaDescription,
+    } = req.body as IPost;
+
+    if (
+      !title ||
+      !content ||
+      !slug ||
+      !featuredImage ||
+      !categories ||
+      !metaDescription ||
+      !metaTitle
+    ) {
+      return next(new ErrorHandler(400, "Please enter all fields"));
+    }
+
+    const categoriesToConnect = await Promise.all(
+      categories.map(async (category) => {
+        const existingCategory = await prisma.category.upsert({
+          where: { name: category },
+          update: {},
+          create: { name: category },
+        });
+        return { id: existingCategory.id };
+      })
+    );
+
+    await prisma.postCategory.deleteMany({
+      where: { postId },
+    });
+
+    //Note : cloudinary image functionality
+
+    const post = await prisma.post.update({
+      where: { id: postId },
+      data: {
+        title,
+        content,
+        featuredImage,
+        slug,
+        categories: {
+          create: categoriesToConnect.map((category) => ({
+            category: { connect: { id: category.id } },
+          })),
+        },
+        metaTitle,
+        metaDescription,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      post,
+    });
+  }
 );
 
 export const deletePost = TryCatch(
@@ -164,22 +267,27 @@ export const deletePost = TryCatch(
   }
 );
 
+//User
 export const getAllPost = TryCatch(
   async (req: Request, res: Response, next: NextFunction) => {
     const posts = await prisma.post.findMany({
       where: { published: true },
 
       include: {
+        categories: {
+          select: {
+            category: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
         author: {
           select: {
             name: true,
             email: true,
             id: true,
-          },
-        },
-        comments: {
-          include: {
-            replies: true,
           },
         },
       },

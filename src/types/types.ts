@@ -15,3 +15,23 @@ export interface IRegistration {
   email: string;
   password: string;
 }
+
+export interface IPost {
+  id: number;
+  title: string;
+  slug: string;
+  content: string;
+  categories: string[];
+  featuredImage: string;
+  published: boolean;
+  publishedAt: Date;
+  author: IUser;
+  authorId: string;
+  views: number;
+  likes: number;
+  comments: string[];
+  metaTitle: string | null;
+  metaDescription: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}

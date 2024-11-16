@@ -4,6 +4,7 @@ import { errorMiddleware } from "./middlewares/error.js";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import user from "./routes/user.route.js";
+import post from "./routes/post.route.js";
 dotenv.config({ path: "./.env" });
 export const envMode = process.env.NODE_ENV?.trim() || "DEVELOPMENT";
 export const app = express();
@@ -16,6 +17,7 @@ app.get("/", (req, res) => {
 });
 // your routes here
 app.use("/api/v1", user);
+app.use("/api/v1", post);
 app.get("*", (req, res) => {
     res.status(404).json({
         success: false,

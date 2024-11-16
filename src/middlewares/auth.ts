@@ -46,3 +46,15 @@ export const isAdmin = TryCatch(
     }
   }
 );
+
+export const isAuthor = TryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    if (req.user?.role === "AUTHOR") {
+      next();
+    } else {
+      return next(
+        new ErrorHandler(400, "You are not authorized to access this resource")
+      );
+    }
+  }
+);

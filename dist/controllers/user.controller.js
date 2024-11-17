@@ -104,7 +104,11 @@ export const getUser = TryCatch(async (req, res, next) => {
     const user = await prisma.user.findUnique({
         where: { id: data.id },
         include: {
-            profile: true,
+            profile: {
+                include: {
+                    social: true,
+                },
+            },
         },
     });
     res.status(200).json({
@@ -207,7 +211,7 @@ export const resetPassword = TryCatch(async (req, res, next) => {
 });
 export const updateProfile = TryCatch(async (req, res, next) => {
     const data = req.user;
-    const { name, email, bio, avatar } = req.body;
+    const { name, email, bio, avatar, instaLink, linkedinLink, facebookLink, githubLink, } = req.body;
     if (!data) {
         return next(new ErrorHandler(400, "Please login to access the resource"));
     }
@@ -216,9 +220,7 @@ export const updateProfile = TryCatch(async (req, res, next) => {
     }
     //Note cloudinary avatar upload
     await prisma.user.update({
-        where: {
-            id: data?.id,
-        },
+        where: { id: data.id },
         data: {
             name,
             email,
@@ -226,6 +228,22 @@ export const updateProfile = TryCatch(async (req, res, next) => {
                 update: {
                     avatar,
                     bio,
+                    social: {
+                        upsert: {
+                            create: {
+                                instaLink,
+                                linkedinLink,
+                                facebookLink,
+                                githubLink,
+                            },
+                            update: {
+                                instaLink,
+                                linkedinLink,
+                                facebookLink,
+                                githubLink,
+                            },
+                        },
+                    },
                 },
             },
         },

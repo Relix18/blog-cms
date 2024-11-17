@@ -35,3 +35,12 @@ export interface IPost {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface IReply {
+  reply: string;
+  commentId: number;
+}
+
+export interface IComment {
+  comment: string;
+}

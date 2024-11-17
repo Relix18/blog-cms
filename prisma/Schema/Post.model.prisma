@@ -10,12 +10,20 @@ model Post {
     author          User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
     authorId        String
     views           Int            @default(0)
-    likes           Int            @default(0)
+    likes           Like[]
     comments        Comment[]      
     metaTitle       String?
     metaDescription String?
     createdAt       DateTime       @default(now())
     updatedAt       DateTime       @updatedAt
+}
+
+model Like{
+    id  Int @id @default(autoincrement())
+    post Post @relation(fields: [postId],references: [id],onDelete: Cascade)
+    postId Int
+    user User @relation(fields: [userId],references: [id], onDelete: Cascade)
+    userId String
 }
 
 model Category {
@@ -33,6 +41,7 @@ model Comment {
     postId   Int
     post     Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
     replies  Reply[]  
+    createdAt DateTime @default(now())
 }
 
 model Reply {
@@ -41,7 +50,8 @@ model Reply {
     user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
     userId    String
     commentId Int
-    comment   Comment  @relation(fields: [commentId], references: [id])
+    comment   Comment  @relation(fields: [commentId], references: [id],onDelete:Cascade)
+    createdAt DateTime @default(now())
 }
 
 model PostCategory {

@@ -6,6 +6,7 @@ model User{
     role Role @default(USER)
     posts Post[]
     comments Comment[]
+    postLike Like[]
     reply Reply[]
     profile Profile?
     resetPasswordToken String?
@@ -18,12 +19,24 @@ model Profile{
     id Int @id @default(autoincrement())
     avatar String
     bio String?
+    social Social?
     user User @relation(fields: [userId],references: [id], onDelete: Cascade)
     userId String @unique
 }
+
 
 enum Role{
     USER
     AUTHOR
     ADMIN
+}
+
+model Social{
+    id Int @id @default(autoincrement())
+    profileId Int @unique
+    profile Profile @relation(fields: [profileId],references: [id],onDelete: Cascade)
+    instaLink String?
+    linkedinLink String?
+    facebookLink String?
+    githubLink String?
 }

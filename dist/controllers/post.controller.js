@@ -326,32 +326,29 @@ export const postLike = TryCatch(async (req, res, next) => {
     const existingLike = await prisma.like.findFirst({
         where: { userId: id, postId },
     });
-    try {
-        if (existingLike) {
-            await prisma.like.delete({
-                where: { id: existingLike.id },
-            });
-            return res.status(200).json({
-                success: true,
-                message: "Post unliked",
-            });
-        }
-        else {
-            await prisma.like.create({
-                data: {
-                    postId,
-                    userId: id,
-                },
-            });
-            res.status(200).json({
-                success: true,
-                message: "Post liked",
-            });
-        }
+    let message = "";
+    let likeCount = 0;
+    if (existingLike) {
+        await prisma.like.delete({
+            where: { id: existingLike.id },
+        });
+        message = "Post unliked successfully";
     }
-    catch (error) {
-        next(new ErrorHandler(500, "Error occured"));
+    else {
+        await prisma.like.create({
+            data: {
+                postId,
+                userId: id,
+            },
+        });
+        message = "Post liked successfully";
     }
+    likeCount = await prisma.like.count({ where: { postId } });
+    //Note pusher implement
+    res.status(200).json({
+        success: true,
+        message,
+    });
 });
 export const likedPost = TryCatch(async (req, res, next) => {
     const { id } = req.user;

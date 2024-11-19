@@ -183,7 +183,14 @@ export const updatePost = TryCatch(async (req, res, next) => {
 });
 export const deletePost = TryCatch(async (req, res, next) => {
     const id = req.params.id;
+    const user = req.user;
     const postId = parseInt(id);
+    const post = await prisma.post.findFirst({
+        where: { id: postId, authorId: user?.id },
+    });
+    if (!post) {
+        return next(new ErrorHandler(400, "You are not an author of this post."));
+    }
     await prisma.reply.deleteMany({
         where: {
             comment: {
@@ -195,6 +202,9 @@ export const deletePost = TryCatch(async (req, res, next) => {
         where: {
             postId,
         },
+    });
+    await prisma.like.deleteMany({
+        where: { postId },
     });
     await prisma.postCategory.deleteMany({
         where: { postId },
@@ -382,4 +392,90 @@ export const likedPost = TryCatch(async (req, res, next) => {
         result,
     });
 });
-//Note admin delete comment and reply
+//Admin
+export const getAllPostAdmin = TryCatch(async (req, res, next) => {
+    const posts = await prisma.post.findMany({
+        include: {
+            categories: {
+                include: {
+                    category: {
+                        select: {
+                            name: true,
+                        },
+                    },
+                },
+            },
+        },
+    });
+    res.status(200).json({
+        success: true,
+        posts,
+    });
+});
+export const deletePosts = TryCatch(async (req, res, next) => {
+    const { postId } = req.body;
+    await prisma.reply.deleteMany({
+        where: {
+            comment: {
+                postId,
+            },
+        },
+    });
+    await prisma.comment.deleteMany({
+        where: {
+            postId,
+        },
+    });
+    await prisma.like.deleteMany({
+        where: { postId },
+    });
+    await prisma.postCategory.deleteMany({
+        where: { postId },
+    });
+    await prisma.post.delete({
+        where: {
+            id: postId,
+        },
+    });
+    res.status(200).json({
+        success: true,
+        message: "Post deleted successfully",
+    });
+});
+export const deleteComment = TryCatch(async (req, res, next) => {
+    const { id } = req.body;
+    const comment = await prisma.comment.findUnique({
+        where: { id },
+    });
+    if (!comment) {
+        return next(new ErrorHandler(404, "Comment not found"));
+    }
+    await prisma.reply.deleteMany({
+        where: {
+            commentId: id,
+        },
+    });
+    await prisma.comment.delete({
+        where: { id },
+    });
+    res.status(200).json({
+        success: true,
+        message: "Comment deleted successfully",
+    });
+});
+export const deleteReply = TryCatch(async (req, res, next) => {
+    const { id } = req.body;
+    const reply = await prisma.reply.findFirst({
+        where: { id },
+    });
+    if (!reply) {
+        return next(new ErrorHandler(404, "Reply not found"));
+    }
+    await prisma.reply.delete({
+        where: { id },
+    });
+    res.status(200).json({
+        success: true,
+        message: "Reply deleted successfully",
+    });
+});

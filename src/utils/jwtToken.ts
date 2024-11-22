@@ -17,6 +17,7 @@ export const sendToken = (user: IUser, statusCode: number, res: Response) => {
 
   const option = {
     expires: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+    httpOnly: true,
   };
 
   res.cookie("access_token", token, option);

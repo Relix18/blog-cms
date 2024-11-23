@@ -5,6 +5,12 @@ import bcrypt from "bcryptjs";
 import { activationToken, getResetPassword, sendToken, } from "../utils/jwtToken.js";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import ejs from "ejs";
+import path from "path";
+import sendEmail from "../utils/sendMail.js";
+import { fileURLToPath } from "url";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 export const register = TryCatch(async (req, res, next) => {
     const { name, email, password } = req.body;
     const isExist = await prisma.user.findUnique({
@@ -25,21 +31,33 @@ export const register = TryCatch(async (req, res, next) => {
     const option = {
         expires: new Date(Date.now() + 5 * 60 * 1000),
     };
+    const data = { user: { name: user.name }, activationCode };
+    const html = await ejs.renderFile(path.join(__dirname, "../../src/mails/activation-mail.ejs"), data);
     //Note nodemailer
+    try {
+        await sendEmail({
+            email: user.email,
+            subject: "Activate your account",
+            template: "activation-mail.ejs",
+            data,
+        });
+    }
+    catch (error) {
+        return next(new ErrorHandler(400, error?.message));
+    }
     return res.status(200).cookie("activation", token, option).json({
         success: true,
-        token,
-        activationCode,
+        message: "Verification mail has been sent to your email.",
     });
 });
 export const activateUser = TryCatch(async (req, res, next) => {
-    const { activationCode } = req.body;
+    const { otp } = req.body;
     const { activation } = req.cookies;
     if (!activation) {
         return next(new ErrorHandler(400, "Activation Code already expired. Try Again"));
     }
     const newUser = jwt.verify(activation, process.env.JWT_SECRET);
-    if (newUser.activationCode !== activationCode)
+    if (newUser.activationCode !== otp)
         return next(new ErrorHandler(400, "Invalid activation code"));
     res.cookie("activation", "", { expires: new Date() });
     const { name, email, password } = newUser.user;
@@ -58,12 +76,6 @@ export const activateUser = TryCatch(async (req, res, next) => {
             password,
         },
     });
-    await prisma.profile.create({
-        data: {
-            userId: user.id,
-            avatar: "foi",
-        },
-    });
     res.status(200).json({
         success: true,
         user,
@@ -76,6 +88,13 @@ export const login = TryCatch(async (req, res, next) => {
     }
     const user = await prisma.user.findUnique({
         where: { email },
+        include: {
+            profile: {
+                select: {
+                    avatar: true,
+                },
+            },
+        },
     });
     if (!user) {
         return next(new ErrorHandler(400, "Invalid email or password"));

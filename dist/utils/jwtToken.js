@@ -23,7 +23,7 @@ export const activationToken = (user) => {
         user,
         activationCode,
     }, process.env.JWT_SECRET, {
-        expiresIn: "1m",
+        expiresIn: "5m",
     });
     return { token, activationCode };
 };

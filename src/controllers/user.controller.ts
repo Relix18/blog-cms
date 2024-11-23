@@ -11,6 +11,13 @@ import {
 import jwt, { Secret } from "jsonwebtoken";
 import crypto from "crypto";
 import { IRegistration } from "../types/types.js";
+import ejs from "ejs";
+import path from "path";
+import sendEmail from "../utils/sendMail.js";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const register = TryCatch(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -38,20 +45,34 @@ export const register = TryCatch(
     const option = {
       expires: new Date(Date.now() + 5 * 60 * 1000),
     };
+    const data = { user: { name: user.name }, activationCode };
+    const html = await ejs.renderFile(
+      path.join(__dirname, "../../src/mails/activation-mail.ejs"),
+      data
+    );
 
     //Note nodemailer
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: "Activate your account",
+        template: "activation-mail.ejs",
+        data,
+      });
+    } catch (error) {
+      return next(new ErrorHandler(400, error?.message));
+    }
 
     return res.status(200).cookie("activation", token, option).json({
       success: true,
-      token,
-      activationCode,
+      message: "Verification mail has been sent to your email.",
     });
   }
 );
 
 export const activateUser = TryCatch(
   async (req: Request, res: Response, next: NextFunction) => {
-    const { activationCode } = req.body;
+    const { otp } = req.body;
     const { activation } = req.cookies;
 
     if (!activation) {
@@ -65,7 +86,7 @@ export const activateUser = TryCatch(
       process.env.JWT_SECRET as Secret
     ) as { user: IRegistration; activationCode: string };
 
-    if (newUser.activationCode !== activationCode)
+    if (newUser.activationCode !== otp)
       return next(new ErrorHandler(400, "Invalid activation code"));
 
     res.cookie("activation", "", { expires: new Date() });
@@ -90,13 +111,6 @@ export const activateUser = TryCatch(
       },
     });
 
-    await prisma.profile.create({
-      data: {
-        userId: user.id,
-        avatar: "foi",
-      },
-    });
-
     res.status(200).json({
       success: true,
       user,
@@ -118,6 +132,13 @@ export const login = TryCatch(
 
     const user = await prisma.user.findUnique({
       where: { email },
+      include: {
+        profile: {
+          select: {
+            avatar: true,
+          },
+        },
+      },
     });
     if (!user) {
       return next(new ErrorHandler(400, "Invalid email or password"));

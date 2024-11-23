@@ -38,7 +38,7 @@ export const activationToken = (user: IRegistration) => {
     },
     process.env.JWT_SECRET as Secret,
     {
-      expiresIn: "1m",
+      expiresIn: "5m",
     }
   );
   return { token, activationCode };

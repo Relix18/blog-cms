@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OrbitBlog Activation Email</title>
+  </head>
+  <body
+    style="
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+    "
+  >
+    <table
+      role="presentation"
+      width="100%"
+      cellspacing="0"
+      cellpadding="0"
+      border="0"
+    >
+      <tr>
+        <td
+          style="
+            padding: 20px 0;
+            color: #c026d3;
+            text-align: center;
+            font-size: 32px;
+            font-weight: bold;
+            background-color: #ffffff;
+          "
+        >
+          OrbitBlog
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 40px 20px; background-color: #ffffff">
+          <table
+            role="presentation"
+            width="100%"
+            cellspacing="0"
+            cellpadding="0"
+            border="0"
+          >
+            <tr>
+              <td style="padding-bottom: 20px; text-align: center">
+                <h1 style="margin: 0; color: #333333; font-size: 24px">
+                  Hello <%=user.name%>,Your One-Time Password
+                </h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding-bottom: 20px; text-align: center">
+                <p style="margin: 0; font-size: 16px; color: #666666">
+                  Use the following OTP to complete your verification:
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding-bottom: 30px; text-align: center">
+                <div
+                  style="
+                    font-size: 36px;
+                    font-weight: bold;
+                    color: #c026d3;
+                    letter-spacing: 5px;
+                    background-color: #e8f0fe;
+                    padding: 10px;
+                    display: inline-block;
+                  "
+                >
+                  <%=activationCode%>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding-bottom: 20px; text-align: center">
+                <p style="margin: 0; font-size: 14px; color: #666666">
+                  This OTP is valid for 5 minutes. Please do not share this code
+                  with anyone.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="text-align: center">
+                <p style="margin: 0; font-size: 14px; color: #666666">
+                  If you didn't request this OTP, please ignore this email or
+                  contact our support team if you have any concerns.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td
+          style="padding: 20px; text-align: center; background-color: #f8f8f8"
+        >
+          <p style="margin: 0; font-size: 12px; color: #999999">
+            © 2024 OrbitBlog. All rights reserved.<br />
+            <a
+              href="mailto:support@yourcompany.com"
+              style="color: #007bff; text-decoration: none"
+              >support@orbitblog.com</a
+            >
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

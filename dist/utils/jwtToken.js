@@ -18,14 +18,17 @@ export const sendToken = (user, statusCode, res) => {
     });
 };
 export const activationToken = (user) => {
-    const activationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const token = jwt.sign({
         user,
-        activationCode,
+        activationCode: {
+            otp,
+            expire: new Date(Date.now() + 5 * 60 * 1000),
+        },
     }, process.env.JWT_SECRET, {
-        expiresIn: "5m",
+        expiresIn: "60m",
     });
-    return { token, activationCode };
+    return { token, otp };
 };
 export const getResetPassword = () => {
     const resetToken = crypto.randomBytes(20).toString("hex");

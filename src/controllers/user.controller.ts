@@ -40,18 +40,17 @@ export const register = TryCatch(
       password: hashedPassword,
     };
 
-    const { token, activationCode } = activationToken(user);
+    const { token, otp } = activationToken(user);
 
     const option = {
-      expires: new Date(Date.now() + 5 * 60 * 1000),
+      expires: new Date(Date.now() + 60 * 60 * 1000),
     };
-    const data = { user: { name: user.name }, activationCode };
+    const data = { user: { name: user.name }, otp };
     const html = await ejs.renderFile(
       path.join(__dirname, "../../src/mails/activation-mail.ejs"),
       data
     );
 
-    //Note nodemailer
     try {
       await sendEmail({
         email: user.email,
@@ -59,7 +58,7 @@ export const register = TryCatch(
         template: "activation-mail.ejs",
         data,
       });
-    } catch (error) {
+    } catch (error: any) {
       return next(new ErrorHandler(400, error?.message));
     }
 
@@ -77,19 +76,32 @@ export const activateUser = TryCatch(
 
     if (!activation) {
       return next(
-        new ErrorHandler(400, "Activation Code already expired. Try Again")
+        new ErrorHandler(
+          400,
+          "Verification session expired. Please sign up again."
+        )
       );
     }
 
     const newUser = jwt.verify(
       activation,
       process.env.JWT_SECRET as Secret
-    ) as { user: IRegistration; activationCode: string };
+    ) as { user: IRegistration; activationCode: { otp: string; expire: Date } };
 
-    if (newUser.activationCode !== otp)
+    if (newUser.activationCode.expire < new Date(Date.now())) {
+      return next(
+        new ErrorHandler(400, "Activation code already expired. Try again ")
+      );
+    }
+
+    if (newUser.activationCode.otp !== otp)
       return next(new ErrorHandler(400, "Invalid activation code"));
 
-    res.cookie("activation", "", { expires: new Date() });
+    res.clearCookie("activation", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
 
     const { name, email, password } = newUser.user;
 
@@ -111,9 +123,90 @@ export const activateUser = TryCatch(
       },
     });
 
+    sendToken(user, 200, res);
+  }
+);
+
+export const resendOtp = TryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { activation } = req.cookies;
+
+    if (!activation) {
+      return next(
+        new ErrorHandler(
+          400,
+          "Verification session expired. Please sign up again."
+        )
+      );
+    }
+
+    let decodedToken;
+    try {
+      decodedToken = jwt.verify(
+        activation,
+        process.env.JWT_SECRET as Secret
+      ) as {
+        user: IRegistration;
+        activationCode: { otp: string; expire: Date };
+      };
+    } catch (err) {
+      return next(
+        new ErrorHandler(400, "Invalid or expired activation token.")
+      );
+    }
+
+    const { user } = decodedToken;
+
+    const isExist = await prisma.user.findUnique({
+      where: { email: user.email },
+    });
+
+    if (isExist) {
+      return next(new ErrorHandler(400, "Email already exists."));
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expire = new Date(Date.now() + 5 * 60 * 1000);
+
+    const newActivationToken = jwt.sign(
+      {
+        user,
+        activationCode: {
+          otp,
+          expire,
+        },
+      },
+      process.env.JWT_SECRET as Secret,
+      { expiresIn: "60m" }
+    );
+
+    res.cookie("activation", newActivationToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 60 * 60 * 1000,
+    });
+
+    const data = { user: { name: user.name }, otp };
+    await ejs.renderFile(
+      path.join(__dirname, "../../src/mails/activation-mail.ejs"),
+      data
+    );
+
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: "Activate your account",
+        template: "activation-mail.ejs",
+        data,
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(400, error?.message));
+    }
+
     res.status(200).json({
       success: true,
-      user,
+      message: "OTP has been resent successfully. Please check your email.",
     });
   }
 );

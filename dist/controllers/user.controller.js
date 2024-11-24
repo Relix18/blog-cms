@@ -27,13 +27,12 @@ export const register = TryCatch(async (req, res, next) => {
         email,
         password: hashedPassword,
     };
-    const { token, activationCode } = activationToken(user);
+    const { token, otp } = activationToken(user);
     const option = {
-        expires: new Date(Date.now() + 5 * 60 * 1000),
+        expires: new Date(Date.now() + 60 * 60 * 1000),
     };
-    const data = { user: { name: user.name }, activationCode };
+    const data = { user: { name: user.name }, otp };
     const html = await ejs.renderFile(path.join(__dirname, "../../src/mails/activation-mail.ejs"), data);
-    //Note nodemailer
     try {
         await sendEmail({
             email: user.email,
@@ -54,12 +53,19 @@ export const activateUser = TryCatch(async (req, res, next) => {
     const { otp } = req.body;
     const { activation } = req.cookies;
     if (!activation) {
-        return next(new ErrorHandler(400, "Activation Code already expired. Try Again"));
+        return next(new ErrorHandler(400, "Verification session expired. Please sign up again."));
     }
     const newUser = jwt.verify(activation, process.env.JWT_SECRET);
-    if (newUser.activationCode !== otp)
+    if (newUser.activationCode.expire < new Date(Date.now())) {
+        return next(new ErrorHandler(400, "Activation code already expired. Try again "));
+    }
+    if (newUser.activationCode.otp !== otp)
         return next(new ErrorHandler(400, "Invalid activation code"));
-    res.cookie("activation", "", { expires: new Date() });
+    res.clearCookie("activation", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+    });
     const { name, email, password } = newUser.user;
     const isExist = await prisma.user.findUnique({
         where: {
@@ -76,9 +82,58 @@ export const activateUser = TryCatch(async (req, res, next) => {
             password,
         },
     });
+    sendToken(user, 200, res);
+});
+export const resendOtp = TryCatch(async (req, res, next) => {
+    const { activation } = req.cookies;
+    if (!activation) {
+        return next(new ErrorHandler(400, "Verification session expired. Please sign up again."));
+    }
+    let decodedToken;
+    try {
+        decodedToken = jwt.verify(activation, process.env.JWT_SECRET);
+    }
+    catch (err) {
+        return next(new ErrorHandler(400, "Invalid or expired activation token."));
+    }
+    const { user } = decodedToken;
+    const isExist = await prisma.user.findUnique({
+        where: { email: user.email },
+    });
+    if (isExist) {
+        return next(new ErrorHandler(400, "Email already exists."));
+    }
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expire = new Date(Date.now() + 5 * 60 * 1000);
+    const newActivationToken = jwt.sign({
+        user,
+        activationCode: {
+            otp,
+            expire,
+        },
+    }, process.env.JWT_SECRET, { expiresIn: "60m" });
+    res.cookie("activation", newActivationToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 60 * 60 * 1000,
+    });
+    const data = { user: { name: user.name }, otp };
+    await ejs.renderFile(path.join(__dirname, "../../src/mails/activation-mail.ejs"), data);
+    try {
+        await sendEmail({
+            email: user.email,
+            subject: "Activate your account",
+            template: "activation-mail.ejs",
+            data,
+        });
+    }
+    catch (error) {
+        return next(new ErrorHandler(400, error?.message));
+    }
     res.status(200).json({
         success: true,
-        user,
+        message: "OTP has been resent successfully. Please check your email.",
     });
 });
 export const login = TryCatch(async (req, res, next) => {

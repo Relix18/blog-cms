@@ -9,6 +9,7 @@ import {
   login,
   logout,
   register,
+  resendOtp,
   resetPassword,
   socialAuth,
   updatePassword,
@@ -16,11 +17,13 @@ import {
   updateRole,
 } from "../controllers/user.controller.js";
 import { isAdmin, isAuthenticated } from "../middlewares/auth.js";
+import { apiLimiter } from "../middlewares/rateLimit.js";
 
 const router = Router();
 
 router.post("/register", register);
 router.post("/activation", activateUser);
+router.post("/resend-otp", apiLimiter, resendOtp);
 router.post("/login", login);
 router.get("/logout", logout);
 router.post("/social", socialAuth);

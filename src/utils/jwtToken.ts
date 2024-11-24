@@ -30,18 +30,21 @@ export const sendToken = (user: IUser, statusCode: number, res: Response) => {
 };
 
 export const activationToken = (user: IRegistration) => {
-  const activationCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
   const token = jwt.sign(
     {
       user,
-      activationCode,
+      activationCode: {
+        otp,
+        expire: new Date(Date.now() + 5 * 60 * 1000),
+      },
     },
     process.env.JWT_SECRET as Secret,
     {
-      expiresIn: "5m",
+      expiresIn: "60m",
     }
   );
-  return { token, activationCode };
+  return { token, otp };
 };
 
 export const getResetPassword = () => {

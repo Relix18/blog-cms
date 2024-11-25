@@ -196,12 +196,26 @@ export const socialAuth = TryCatch(async (req, res, next) => {
         where: {
             email,
         },
+        include: {
+            profile: {
+                select: {
+                    avatar: true,
+                },
+            },
+        },
     });
     if (!user) {
         const newUser = await prisma.user.create({
             data: {
                 name,
                 email,
+            },
+            include: {
+                profile: {
+                    select: {
+                        avatar: true,
+                    },
+                },
             },
         });
         sendToken(newUser, 201, res);
@@ -230,9 +244,16 @@ export const forgotPassword = TryCatch(async (req, res, next) => {
             resetPasswordExpire: new Date(resetExpire),
         },
     });
+    const resetPasswordLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+    const data = { link: resetPasswordLink };
+    const html = await ejs.renderFile(path.join(__dirname, "../../src/mails/reset-password.ejs"), data);
     try {
-        //Note nodemailer
-        console.log(resetToken);
+        await sendEmail({
+            email: user.email,
+            subject: "Account password reset",
+            template: "reset-password.ejs",
+            data,
+        });
         res.status(200).json({
             success: true,
             message: `Email sent to ${user.email} successfully.`,

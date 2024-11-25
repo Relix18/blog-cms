@@ -32,7 +32,7 @@ export const activationToken = (user) => {
 };
 export const getResetPassword = () => {
     const resetToken = crypto.randomBytes(20).toString("hex");
-    const resetExpire = Date.now() + 15 * 60 * 1000;
+    const resetExpire = Date.now() + 60 * 60 * 1000;
     const resetPasswordToken = crypto
         .createHash("sha256")
         .update(resetToken)

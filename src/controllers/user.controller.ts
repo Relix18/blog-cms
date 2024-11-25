@@ -299,6 +299,13 @@ export const socialAuth = TryCatch(
       where: {
         email,
       },
+      include: {
+        profile: {
+          select: {
+            avatar: true,
+          },
+        },
+      },
     });
 
     if (!user) {
@@ -306,6 +313,13 @@ export const socialAuth = TryCatch(
         data: {
           name,
           email,
+        },
+        include: {
+          profile: {
+            select: {
+              avatar: true,
+            },
+          },
         },
       });
 
@@ -342,9 +356,22 @@ export const forgotPassword = TryCatch(
       },
     });
 
+    const resetPasswordLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+
+    const data = { link: resetPasswordLink };
+    const html = await ejs.renderFile(
+      path.join(__dirname, "../../src/mails/reset-password.ejs"),
+      data
+    );
+
     try {
-      //Note nodemailer
-      console.log(resetToken);
+      await sendEmail({
+        email: user.email,
+        subject: "Account password reset",
+        template: "reset-password.ejs",
+        data,
+      });
+
       res.status(200).json({
         success: true,
         message: `Email sent to ${user.email} successfully.`,

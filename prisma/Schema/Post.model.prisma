@@ -24,6 +24,7 @@ model Like{
     postId Int
     user User @relation(fields: [userId],references: [id], onDelete: Cascade)
     userId String
+    createdAt DateTime @default(now())
 }
 
 model Category {

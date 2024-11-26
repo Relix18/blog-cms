@@ -161,10 +161,7 @@ export const login = TryCatch(async (req, res, next) => {
     sendToken(user, 200, res);
 });
 export const logout = TryCatch(async (req, res, next) => {
-    res.cookie("access_token", null, {
-        expires: new Date(Date.now()),
-        httpOnly: true,
-    });
+    res.clearCookie("access_token");
     res.status(200).json({
         success: true,
         message: "Logout Successfully",

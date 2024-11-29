@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { activateUser, deleteUser, forgotPassword, getAllUser, getUser, getUserDetails, login, logout, register, resendOtp, resetPassword, socialAuth, updatePassword, updateProfile, updateRole, } from "../controllers/user.controller.js";
+import { activateUser, deleteUser, forgotPassword, getAllUser, getUser, getUserDetails, login, logout, register, resendOtp, resetPassword, socialAuth, updataAvatar, updatePassword, updateProfile, updateRole, } from "../controllers/user.controller.js";
 import { isAdmin, isAuthenticated } from "../middlewares/auth.js";
 import { apiLimiter } from "../middlewares/rateLimit.js";
 const router = Router();
@@ -13,7 +13,8 @@ router.post("/forget-password", forgotPassword);
 router.post("/reset-password/:token", resetPassword);
 router.get("/me", isAuthenticated, getUser);
 router.put("/update-profile", isAuthenticated, updateProfile);
-router.put("/update-password", isAuthenticated, updatePassword);
+router.put("/update-avatar", isAuthenticated, updataAvatar);
+router.put("/change-password", isAuthenticated, updatePassword);
 router.get("/get-all-users", isAuthenticated, isAdmin, getAllUser);
 router.put("/update-role/:id", isAuthenticated, isAdmin, updateRole);
 router.get("/user-details/:id", isAuthenticated, isAdmin, getUserDetails);

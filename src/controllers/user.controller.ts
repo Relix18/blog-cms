@@ -15,6 +15,7 @@ import ejs from "ejs";
 import path from "path";
 import sendEmail from "../utils/sendMail.js";
 import { fileURLToPath } from "url";
+import { v2 as cloudinary } from "cloudinary";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -286,11 +287,12 @@ export const getUser = TryCatch(
 interface ISocialAuth {
   name: string;
   email: string;
+  avatar: string;
 }
 
 export const socialAuth = TryCatch(
   async (req: Request, res: Response, next: NextFunction) => {
-    const { name, email } = req.body as ISocialAuth;
+    const { name, email, avatar } = req.body as ISocialAuth;
 
     const user = await prisma.user.findUnique({
       where: {
@@ -298,8 +300,8 @@ export const socialAuth = TryCatch(
       },
       include: {
         profile: {
-          select: {
-            avatar: true,
+          include: {
+            social: true,
           },
         },
       },
@@ -310,11 +312,10 @@ export const socialAuth = TryCatch(
         data: {
           name,
           email,
-        },
-        include: {
+          isSocial: true,
           profile: {
-            select: {
-              avatar: true,
+            create: {
+              avatar,
             },
           },
         },
@@ -439,7 +440,7 @@ export const updateProfile = TryCatch(
       name,
       email,
       bio,
-      avatar,
+      mailLink,
       instaLink,
       linkedinLink,
       facebookLink,
@@ -450,11 +451,9 @@ export const updateProfile = TryCatch(
       return next(new ErrorHandler(400, "Please login to access the resource"));
     }
 
-    if (!avatar || !name || !email || !bio) {
+    if (!name || !email || !bio) {
       return next(new ErrorHandler(400, "Please fill all the fields"));
     }
-
-    //Note cloudinary avatar upload
 
     await prisma.user.update({
       where: { id: data.id },
@@ -462,22 +461,37 @@ export const updateProfile = TryCatch(
         name,
         email,
         profile: {
-          update: {
-            avatar,
-            bio,
-            social: {
-              upsert: {
+          upsert: {
+            create: {
+              bio,
+              social: {
                 create: {
+                  mailLink,
                   instaLink,
                   linkedinLink,
                   facebookLink,
                   githubLink,
                 },
-                update: {
-                  instaLink,
-                  linkedinLink,
-                  facebookLink,
-                  githubLink,
+              },
+            },
+            update: {
+              bio,
+              social: {
+                upsert: {
+                  create: {
+                    mailLink,
+                    instaLink,
+                    linkedinLink,
+                    facebookLink,
+                    githubLink,
+                  },
+                  update: {
+                    mailLink,
+                    instaLink,
+                    linkedinLink,
+                    facebookLink,
+                    githubLink,
+                  },
                 },
               },
             },
@@ -493,12 +507,60 @@ export const updateProfile = TryCatch(
   }
 );
 
-export const updatePassword = TryCatch(
+export const updataAvatar = TryCatch(
   async (req: Request, res: Response, next: NextFunction) => {
-    const { oldPassword, newPassword } = req.body;
+    const { avatar } = req.body;
     const id = req.user?.id;
 
-    if (!oldPassword || !newPassword) {
+    if (!avatar) {
+      return next(new ErrorHandler(400, "Please upload image"));
+    }
+
+    const user = await prisma.profile.findUnique({
+      where: { userId: id },
+    });
+
+    let avatarUrl;
+    let avatarId;
+
+    if (user?.avatar) {
+      await cloudinary.uploader.destroy(user.avatarId as string);
+      const myCloud = await cloudinary.uploader.upload(avatar, {
+        folder: "blog/avatar",
+        crop: "scale",
+      });
+
+      avatarUrl = myCloud.secure_url;
+      avatarId = myCloud.public_id;
+    } else {
+      const myCloud = await cloudinary.uploader.upload(avatar, {
+        folder: "blog/avatar",
+        crop: "scale",
+      });
+
+      avatarUrl = myCloud.secure_url;
+      avatarId = myCloud.public_id;
+    }
+    await prisma.profile.update({
+      where: { userId: id },
+      data: {
+        avatar: avatarUrl,
+        avatarId,
+      },
+    });
+
+    res
+      .status(200)
+      .json({ success: true, message: "Profile picture updated successfully" });
+  }
+);
+
+export const updatePassword = TryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { currentPassword, newPassword } = req.body;
+    const id = req.user?.id;
+
+    if (!currentPassword || !newPassword) {
       return next(new ErrorHandler(400, "Please enter old and new password"));
     }
 
@@ -516,7 +578,10 @@ export const updatePassword = TryCatch(
       return next(new ErrorHandler(404, "User not found"));
     }
 
-    const isMatch = await bcrypt.compare(oldPassword, user.password as string);
+    const isMatch = await bcrypt.compare(
+      currentPassword,
+      user.password as string
+    );
 
     if (!isMatch) {
       return next(new ErrorHandler(400, "Old password is incorrect"));

@@ -3,6 +3,7 @@ model User{
     name String
     email String @unique
     password String?
+    isSocial Boolean @default(false)
     role Role @default(USER)
     posts Post[]
     comments Comment[]
@@ -17,7 +18,8 @@ model User{
 
 model Profile{
     id Int @id @default(autoincrement())
-    avatar String
+    avatar String?
+    avatarId String?
     bio String?
     social Social?
     user User @relation(fields: [userId],references: [id], onDelete: Cascade)
@@ -35,6 +37,7 @@ model Social{
     id Int @id @default(autoincrement())
     profileId Int @unique
     profile Profile @relation(fields: [profileId],references: [id],onDelete: Cascade)
+    mailLink String?
     instaLink String?
     linkedinLink String?
     facebookLink String?

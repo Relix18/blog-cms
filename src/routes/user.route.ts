@@ -12,6 +12,7 @@ import {
   resendOtp,
   resetPassword,
   socialAuth,
+  updataAvatar,
   updatePassword,
   updateProfile,
   updateRole,
@@ -31,7 +32,8 @@ router.post("/forget-password", forgotPassword);
 router.post("/reset-password/:token", resetPassword);
 router.get("/me", isAuthenticated, getUser);
 router.put("/update-profile", isAuthenticated, updateProfile);
-router.put("/update-password", isAuthenticated, updatePassword);
+router.put("/update-avatar", isAuthenticated, updataAvatar);
+router.put("/change-password", isAuthenticated, updatePassword);
 router.get("/get-all-users", isAuthenticated, isAdmin, getAllUser);
 router.put("/update-role/:id", isAuthenticated, isAdmin, updateRole);
 router.get("/user-details/:id", isAuthenticated, isAdmin, getUserDetails);

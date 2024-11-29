@@ -9,6 +9,7 @@ import ejs from "ejs";
 import path from "path";
 import sendEmail from "../utils/sendMail.js";
 import { fileURLToPath } from "url";
+import { v2 as cloudinary } from "cloudinary";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 export const register = TryCatch(async (req, res, next) => {
@@ -188,15 +189,15 @@ export const getUser = TryCatch(async (req, res, next) => {
     });
 });
 export const socialAuth = TryCatch(async (req, res, next) => {
-    const { name, email } = req.body;
+    const { name, email, avatar } = req.body;
     const user = await prisma.user.findUnique({
         where: {
             email,
         },
         include: {
             profile: {
-                select: {
-                    avatar: true,
+                include: {
+                    social: true,
                 },
             },
         },
@@ -206,11 +207,10 @@ export const socialAuth = TryCatch(async (req, res, next) => {
             data: {
                 name,
                 email,
-            },
-            include: {
+                isSocial: true,
                 profile: {
-                    select: {
-                        avatar: true,
+                    create: {
+                        avatar,
                     },
                 },
             },
@@ -303,36 +303,50 @@ export const resetPassword = TryCatch(async (req, res, next) => {
 });
 export const updateProfile = TryCatch(async (req, res, next) => {
     const data = req.user;
-    const { name, email, bio, avatar, instaLink, linkedinLink, facebookLink, githubLink, } = req.body;
+    const { name, email, bio, mailLink, instaLink, linkedinLink, facebookLink, githubLink, } = req.body;
     if (!data) {
         return next(new ErrorHandler(400, "Please login to access the resource"));
     }
-    if (!avatar || !name || !email || !bio) {
+    if (!name || !email || !bio) {
         return next(new ErrorHandler(400, "Please fill all the fields"));
     }
-    //Note cloudinary avatar upload
     await prisma.user.update({
         where: { id: data.id },
         data: {
             name,
             email,
             profile: {
-                update: {
-                    avatar,
-                    bio,
-                    social: {
-                        upsert: {
+                upsert: {
+                    create: {
+                        bio,
+                        social: {
                             create: {
+                                mailLink,
                                 instaLink,
                                 linkedinLink,
                                 facebookLink,
                                 githubLink,
                             },
-                            update: {
-                                instaLink,
-                                linkedinLink,
-                                facebookLink,
-                                githubLink,
+                        },
+                    },
+                    update: {
+                        bio,
+                        social: {
+                            upsert: {
+                                create: {
+                                    mailLink,
+                                    instaLink,
+                                    linkedinLink,
+                                    facebookLink,
+                                    githubLink,
+                                },
+                                update: {
+                                    mailLink,
+                                    instaLink,
+                                    linkedinLink,
+                                    facebookLink,
+                                    githubLink,
+                                },
                             },
                         },
                     },
@@ -345,10 +359,49 @@ export const updateProfile = TryCatch(async (req, res, next) => {
         message: "Profile updated successfully",
     });
 });
-export const updatePassword = TryCatch(async (req, res, next) => {
-    const { oldPassword, newPassword } = req.body;
+export const updataAvatar = TryCatch(async (req, res, next) => {
+    const { avatar } = req.body;
     const id = req.user?.id;
-    if (!oldPassword || !newPassword) {
+    if (!avatar) {
+        return next(new ErrorHandler(400, "Please upload image"));
+    }
+    const user = await prisma.profile.findUnique({
+        where: { userId: id },
+    });
+    let avatarUrl;
+    let avatarId;
+    if (user?.avatar) {
+        await cloudinary.uploader.destroy(user.avatarId);
+        const myCloud = await cloudinary.uploader.upload(avatar, {
+            folder: "blog/avatar",
+            crop: "scale",
+        });
+        avatarUrl = myCloud.secure_url;
+        avatarId = myCloud.public_id;
+    }
+    else {
+        const myCloud = await cloudinary.uploader.upload(avatar, {
+            folder: "blog/avatar",
+            crop: "scale",
+        });
+        avatarUrl = myCloud.secure_url;
+        avatarId = myCloud.public_id;
+    }
+    await prisma.profile.update({
+        where: { userId: id },
+        data: {
+            avatar: avatarUrl,
+            avatarId,
+        },
+    });
+    res
+        .status(200)
+        .json({ success: true, message: "Profile picture updated successfully" });
+});
+export const updatePassword = TryCatch(async (req, res, next) => {
+    const { currentPassword, newPassword } = req.body;
+    const id = req.user?.id;
+    if (!currentPassword || !newPassword) {
         return next(new ErrorHandler(400, "Please enter old and new password"));
     }
     const user = await prisma.user.findUnique({
@@ -362,7 +415,7 @@ export const updatePassword = TryCatch(async (req, res, next) => {
     if (!user) {
         return next(new ErrorHandler(404, "User not found"));
     }
-    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) {
         return next(new ErrorHandler(400, "Old password is incorrect"));
     }

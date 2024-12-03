@@ -371,7 +371,9 @@ export const updataAvatar = TryCatch(async (req, res, next) => {
     let avatarUrl;
     let avatarId;
     if (user?.avatar) {
-        await cloudinary.uploader.destroy(user.avatarId);
+        if (user?.avatarId) {
+            await cloudinary.uploader.destroy(user.avatarId);
+        }
         const myCloud = await cloudinary.uploader.upload(avatar, {
             folder: "blog/avatar",
             crop: "scale",

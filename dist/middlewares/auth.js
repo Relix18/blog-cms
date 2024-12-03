@@ -26,8 +26,8 @@ export const isAdmin = TryCatch(async (req, res, next) => {
         return next(new ErrorHandler(400, "You are not authorized to access this resource"));
     }
 });
-export const isAuthor = TryCatch(async (req, res, next) => {
-    if (req.user?.role === "AUTHOR") {
+export const isAuthorOrAdmin = TryCatch(async (req, res, next) => {
+    if (req.user?.role === "AUTHOR" || req.user?.role === "ADMIN") {
         next();
     }
     else {

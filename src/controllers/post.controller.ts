@@ -3,18 +3,21 @@ import { TryCatch } from "../middlewares/error.js";
 import { IComment, IPost, IReply, IUser } from "../types/types";
 import ErrorHandler from "../utils/errorHandler.js";
 import prisma from "../lib/db.js";
+import { v2 as cloudinary } from "cloudinary";
 
 //Author
 export const createPost = TryCatch(
   async (req: Request, res: Response, next: NextFunction) => {
-    const {
+    let {
       title,
       slug,
       content,
       categories,
+      description,
       featuredImage,
       metaTitle,
       metaDescription,
+      metaKeyword,
     } = req.body as IPost;
     const user = req.user;
 
@@ -28,32 +31,57 @@ export const createPost = TryCatch(
       !title ||
       !content ||
       !slug ||
+      !description ||
       !featuredImage ||
-      !categories ||
-      !metaDescription ||
-      !metaTitle
+      !categories
     ) {
       return next(new ErrorHandler(400, "Please enter all fields"));
     }
 
     //Note: cloudinary for image
+    let featuredImageId;
+    try {
+      let myCloud = await cloudinary.uploader.upload(featuredImage, {
+        folder: "blog/post",
+      });
+      featuredImage = myCloud.secure_url;
+      featuredImageId = myCloud.public_id;
+    } catch (error) {
+      return next(new ErrorHandler(400, "An error occurred"));
+    }
 
     const categoriesToConnect = await Promise.all(
       categories.map(async (category) => {
+        const label = category.charAt(0).toUpperCase() + category.slice(1);
+        const value = category.toLowerCase();
         const existingCategory = await prisma.category.upsert({
-          where: { name: category },
+          where: { value },
           update: {},
-          create: { name: category },
+          create: { value, label },
         });
         return { id: existingCategory.id };
       })
     );
+
+    let isSlugExists = await prisma.post.findUnique({
+      where: { slug },
+    });
+
+    let count = 1;
+
+    while (isSlugExists) {
+      slug = `${slug}-${count}`;
+      isSlugExists = await prisma.post.findUnique({ where: { slug } });
+      count++;
+    }
 
     const post = await prisma.post.create({
       data: {
         title,
         content,
         featuredImage,
+        featuredImageId,
+        description,
         slug,
         authorId: user.id,
         categories: {
@@ -63,6 +91,7 @@ export const createPost = TryCatch(
         },
         metaTitle,
         metaDescription,
+        metaKeyword,
       },
     });
 
@@ -325,6 +354,17 @@ export const getAllPost = TryCatch(
     res.status(200).json({
       success: true,
       posts,
+    });
+  }
+);
+
+export const getCategory = TryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const categories = await prisma.category.findMany();
+
+    res.status(200).json({
+      success: true,
+      categories,
     });
   }
 );

@@ -3,8 +3,10 @@ model Post {
     title           String
     slug            String         @unique
     content         String
+    description     String 
     categories      PostCategory[] 
     featuredImage   String?
+    featuredImageId String?
     published       Boolean        @default(false)
     publishedAt     DateTime?
     author          User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
@@ -14,6 +16,7 @@ model Post {
     comments        Comment[]      
     metaTitle       String?
     metaDescription String?
+    metaKeyword     String?
     createdAt       DateTime       @default(now())
     updatedAt       DateTime       @updatedAt
 }
@@ -29,7 +32,8 @@ model Like{
 
 model Category {
     id    Int       @id @default(autoincrement())
-    name  String    @unique    
+    value  String    @unique
+    label String @unique    
     posts PostCategory[] 
 
 }

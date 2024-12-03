@@ -22,6 +22,7 @@ export interface IPost {
   slug: string;
   content: string;
   categories: string[];
+  description: string;
   featuredImage: string;
   published: boolean;
   publishedAt: Date;
@@ -32,6 +33,7 @@ export interface IPost {
   comments: string[];
   metaTitle: string | null;
   metaDescription: string | null;
+  metaKeyword: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -47,9 +47,9 @@ export const isAdmin = TryCatch(
   }
 );
 
-export const isAuthor = TryCatch(
+export const isAuthorOrAdmin = TryCatch(
   async (req: Request, res: Response, next: NextFunction) => {
-    if (req.user?.role === "AUTHOR") {
+    if (req.user?.role === "AUTHOR" || req.user?.role === "ADMIN") {
       next();
     } else {
       return next(

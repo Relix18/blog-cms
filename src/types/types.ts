@@ -30,7 +30,7 @@ export interface IPost {
   authorId: string;
   views: number;
   likes: number;
-  comments: string[];
+  comments: IComment;
   metaTitle: string | null;
   metaDescription: string | null;
   metaKeyword: string | null;

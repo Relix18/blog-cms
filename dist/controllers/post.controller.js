@@ -17,7 +17,6 @@ export const createPost = TryCatch(async (req, res, next) => {
         !categories) {
         return next(new ErrorHandler(400, "Please enter all fields"));
     }
-    //Note: cloudinary for image
     let featuredImageId;
     try {
         let myCloud = await cloudinary.uploader.upload(featuredImage, {
@@ -103,7 +102,8 @@ export const getAuthorPost = TryCatch(async (req, res, next) => {
                 select: {
                     category: {
                         select: {
-                            name: true,
+                            value: true,
+                            label: true,
                         },
                     },
                 },
@@ -118,13 +118,14 @@ export const getAuthorPost = TryCatch(async (req, res, next) => {
 export const getSinglePost = TryCatch(async (req, res, next) => {
     const slug = req.params.slug;
     const post = await prisma.post.findUnique({
-        where: { slug, published: true },
+        where: { slug },
         include: {
             categories: {
                 select: {
                     category: {
                         select: {
-                            name: true,
+                            value: true,
+                            label: true,
                         },
                     },
                 },
@@ -163,34 +164,54 @@ export const getSinglePost = TryCatch(async (req, res, next) => {
 export const updatePost = TryCatch(async (req, res, next) => {
     const id = req.params.id;
     const postId = parseInt(id);
-    const { title, slug, content, categories, featuredImage, metaTitle, metaDescription, } = req.body;
+    let { title, slug, content, categories, featuredImage, metaTitle, metaDescription, metaKeyword, } = req.body;
     if (!title ||
         !content ||
         !slug ||
         !featuredImage ||
         !categories ||
         !metaDescription ||
-        !metaTitle) {
+        !metaTitle ||
+        !metaKeyword) {
         return next(new ErrorHandler(400, "Please enter all fields"));
     }
     const categoriesToConnect = await Promise.all(categories.map(async (category) => {
+        const label = category.charAt(0).toUpperCase() + category.slice(1);
+        const value = category.toLowerCase();
         const existingCategory = await prisma.category.upsert({
-            where: { name: category },
+            where: { value },
             update: {},
-            create: { name: category },
+            create: { label, value },
         });
         return { id: existingCategory.id };
     }));
     await prisma.postCategory.deleteMany({
         where: { postId },
     });
-    //Note : cloudinary image functionality
+    const oldPost = await prisma.post.findUnique({
+        where: { id: postId },
+    });
+    let featuredImageId;
+    if (!featuredImage.startsWith("https://res.cloudinary.com")) {
+        try {
+            await cloudinary.uploader.destroy(oldPost?.featuredImageId);
+            let myCloud = await cloudinary.uploader.upload(featuredImage, {
+                folder: "blog/post",
+            });
+            featuredImage = myCloud.secure_url;
+            featuredImageId = myCloud.public_id;
+        }
+        catch (error) {
+            return next(new ErrorHandler(400, "An error occurred"));
+        }
+    }
     const post = await prisma.post.update({
         where: { id: postId },
         data: {
             title,
             content,
             featuredImage,
+            featuredImageId,
             slug,
             categories: {
                 create: categoriesToConnect.map((category) => ({
@@ -199,6 +220,7 @@ export const updatePost = TryCatch(async (req, res, next) => {
             },
             metaTitle,
             metaDescription,
+            metaKeyword,
         },
     });
     res.status(200).json({
@@ -253,7 +275,8 @@ export const getAllPost = TryCatch(async (req, res, next) => {
                 select: {
                     category: {
                         select: {
-                            name: true,
+                            value: true,
+                            label: true,
                         },
                     },
                 },
@@ -429,7 +452,8 @@ export const getAllPostAdmin = TryCatch(async (req, res, next) => {
                 include: {
                     category: {
                         select: {
-                            name: true,
+                            value: true,
+                            label: true,
                         },
                     },
                 },

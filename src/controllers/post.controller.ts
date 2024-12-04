@@ -38,7 +38,6 @@ export const createPost = TryCatch(
       return next(new ErrorHandler(400, "Please enter all fields"));
     }
 
-    //Note: cloudinary for image
     let featuredImageId;
     try {
       let myCloud = await cloudinary.uploader.upload(featuredImage, {
@@ -143,7 +142,8 @@ export const getAuthorPost = TryCatch(
           select: {
             category: {
               select: {
-                name: true,
+                value: true,
+                label: true,
               },
             },
           },
@@ -163,13 +163,14 @@ export const getSinglePost = TryCatch(
     const slug = req.params.slug;
 
     const post = await prisma.post.findUnique({
-      where: { slug, published: true },
+      where: { slug },
       include: {
         categories: {
           select: {
             category: {
               select: {
-                name: true,
+                value: true,
+                label: true,
               },
             },
           },
@@ -213,7 +214,7 @@ export const updatePost = TryCatch(
   async (req: Request, res: Response, next: NextFunction) => {
     const id = req.params.id;
     const postId = parseInt(id);
-    const {
+    let {
       title,
       slug,
       content,
@@ -221,6 +222,7 @@ export const updatePost = TryCatch(
       featuredImage,
       metaTitle,
       metaDescription,
+      metaKeyword,
     } = req.body as IPost;
 
     if (
@@ -230,17 +232,20 @@ export const updatePost = TryCatch(
       !featuredImage ||
       !categories ||
       !metaDescription ||
-      !metaTitle
+      !metaTitle ||
+      !metaKeyword
     ) {
       return next(new ErrorHandler(400, "Please enter all fields"));
     }
 
     const categoriesToConnect = await Promise.all(
       categories.map(async (category) => {
+        const label = category.charAt(0).toUpperCase() + category.slice(1);
+        const value = category.toLowerCase();
         const existingCategory = await prisma.category.upsert({
-          where: { name: category },
+          where: { value },
           update: {},
-          create: { name: category },
+          create: { label, value },
         });
         return { id: existingCategory.id };
       })
@@ -250,7 +255,23 @@ export const updatePost = TryCatch(
       where: { postId },
     });
 
-    //Note : cloudinary image functionality
+    const oldPost = await prisma.post.findUnique({
+      where: { id: postId },
+    });
+
+    let featuredImageId;
+    if (!featuredImage.startsWith("https://res.cloudinary.com")) {
+      try {
+        await cloudinary.uploader.destroy(oldPost?.featuredImageId as string);
+        let myCloud = await cloudinary.uploader.upload(featuredImage, {
+          folder: "blog/post",
+        });
+        featuredImage = myCloud.secure_url;
+        featuredImageId = myCloud.public_id;
+      } catch (error) {
+        return next(new ErrorHandler(400, "An error occurred"));
+      }
+    }
 
     const post = await prisma.post.update({
       where: { id: postId },
@@ -258,6 +279,7 @@ export const updatePost = TryCatch(
         title,
         content,
         featuredImage,
+        featuredImageId,
         slug,
         categories: {
           create: categoriesToConnect.map((category) => ({
@@ -266,6 +288,7 @@ export const updatePost = TryCatch(
         },
         metaTitle,
         metaDescription,
+        metaKeyword,
       },
     });
 
@@ -336,7 +359,8 @@ export const getAllPost = TryCatch(
           select: {
             category: {
               select: {
-                name: true,
+                value: true,
+                label: true,
               },
             },
           },
@@ -561,7 +585,8 @@ export const getAllPostAdmin = TryCatch(
           include: {
             category: {
               select: {
-                name: true,
+                value: true,
+                label: true,
               },
             },
           },

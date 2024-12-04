@@ -2,6 +2,7 @@ import { TryCatch } from "../middlewares/error.js";
 import ErrorHandler from "../utils/errorHandler.js";
 import prisma from "../lib/db.js";
 import { v2 as cloudinary } from "cloudinary";
+import calculateReadingTime from "../utils/readingTime.js";
 //Author
 export const createPost = TryCatch(async (req, res, next) => {
     let { title, slug, content, categories, description, featuredImage, metaTitle, metaDescription, metaKeyword, } = req.body;
@@ -14,7 +15,10 @@ export const createPost = TryCatch(async (req, res, next) => {
         !slug ||
         !description ||
         !featuredImage ||
-        !categories) {
+        !categories ||
+        !metaTitle ||
+        !metaDescription ||
+        !metaKeyword) {
         return next(new ErrorHandler(400, "Please enter all fields"));
     }
     let featuredImageId;
@@ -47,6 +51,7 @@ export const createPost = TryCatch(async (req, res, next) => {
         isSlugExists = await prisma.post.findUnique({ where: { slug } });
         count++;
     }
+    const minRead = calculateReadingTime(content);
     const post = await prisma.post.create({
         data: {
             title,
@@ -54,6 +59,7 @@ export const createPost = TryCatch(async (req, res, next) => {
             featuredImage,
             featuredImageId,
             description,
+            minRead,
             slug,
             authorId: user.id,
             categories: {
@@ -120,6 +126,12 @@ export const getSinglePost = TryCatch(async (req, res, next) => {
     const post = await prisma.post.findUnique({
         where: { slug },
         include: {
+            author: {
+                select: {
+                    name: true,
+                    email: true,
+                },
+            },
             categories: {
                 select: {
                     category: {
@@ -205,6 +217,7 @@ export const updatePost = TryCatch(async (req, res, next) => {
             return next(new ErrorHandler(400, "An error occurred"));
         }
     }
+    const minRead = calculateReadingTime(title);
     const post = await prisma.post.update({
         where: { id: postId },
         data: {
@@ -212,6 +225,7 @@ export const updatePost = TryCatch(async (req, res, next) => {
             content,
             featuredImage,
             featuredImageId,
+            minRead,
             slug,
             categories: {
                 create: categoriesToConnect.map((category) => ({

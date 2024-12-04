@@ -13,7 +13,8 @@ model Post {
     authorId        String
     views           Int            @default(0)
     likes           Like[]
-    comments        Comment[]      
+    comments        Comment[]  
+    minRead         Int    
     metaTitle       String?
     metaDescription String?
     metaKeyword     String?

@@ -29,7 +29,8 @@ export interface IPost {
   author: IUser;
   authorId: string;
   views: number;
-  likes: number;
+  likes: ILike;
+  minRead: number;
   comments: IComment;
   metaTitle: string | null;
   metaDescription: string | null;
@@ -45,4 +46,11 @@ export interface IReply {
 
 export interface IComment {
   comment: string;
+}
+
+export interface ILike {
+  id: string;
+  postId: number;
+  userId: string;
+  createdAt: Date;
 }

@@ -4,6 +4,7 @@ import { IComment, IPost, IReply, IUser } from "../types/types";
 import ErrorHandler from "../utils/errorHandler.js";
 import prisma from "../lib/db.js";
 import { v2 as cloudinary } from "cloudinary";
+import calculateReadingTime from "../utils/readingTime.js";
 
 //Author
 export const createPost = TryCatch(
@@ -33,7 +34,10 @@ export const createPost = TryCatch(
       !slug ||
       !description ||
       !featuredImage ||
-      !categories
+      !categories ||
+      !metaTitle ||
+      !metaDescription ||
+      !metaKeyword
     ) {
       return next(new ErrorHandler(400, "Please enter all fields"));
     }
@@ -74,6 +78,8 @@ export const createPost = TryCatch(
       count++;
     }
 
+    const minRead = calculateReadingTime(content);
+
     const post = await prisma.post.create({
       data: {
         title,
@@ -81,6 +87,7 @@ export const createPost = TryCatch(
         featuredImage,
         featuredImageId,
         description,
+        minRead,
         slug,
         authorId: user.id,
         categories: {
@@ -165,6 +172,12 @@ export const getSinglePost = TryCatch(
     const post = await prisma.post.findUnique({
       where: { slug },
       include: {
+        author: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
         categories: {
           select: {
             category: {
@@ -273,6 +286,8 @@ export const updatePost = TryCatch(
       }
     }
 
+    const minRead = calculateReadingTime(title);
+
     const post = await prisma.post.update({
       where: { id: postId },
       data: {
@@ -280,6 +295,7 @@ export const updatePost = TryCatch(
         content,
         featuredImage,
         featuredImageId,
+        minRead,
         slug,
         categories: {
           create: categoriesToConnect.map((category) => ({

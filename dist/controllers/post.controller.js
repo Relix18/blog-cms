@@ -3,6 +3,7 @@ import ErrorHandler from "../utils/errorHandler.js";
 import prisma from "../lib/db.js";
 import { v2 as cloudinary } from "cloudinary";
 import calculateReadingTime from "../utils/readingTime.js";
+import pusher from "../utils/pusher.js";
 //Author
 export const createPost = TryCatch(async (req, res, next) => {
     let { title, slug, content, categories, description, featuredImage, metaTitle, metaDescription, metaKeyword, } = req.body;
@@ -143,26 +144,6 @@ export const getSinglePost = TryCatch(async (req, res, next) => {
                 },
             },
             likes: true,
-            comments: {
-                include: {
-                    replies: {
-                        include: {
-                            user: {
-                                select: {
-                                    name: true,
-                                    email: true,
-                                },
-                            },
-                        },
-                    },
-                    user: {
-                        select: {
-                            name: true,
-                            email: true,
-                        },
-                    },
-                },
-            },
         },
     });
     if (!post) {
@@ -217,7 +198,7 @@ export const updatePost = TryCatch(async (req, res, next) => {
             return next(new ErrorHandler(400, "An error occurred"));
         }
     }
-    const minRead = calculateReadingTime(title);
+    const minRead = calculateReadingTime(content);
     const post = await prisma.post.update({
         where: { id: postId },
         data: {
@@ -341,6 +322,53 @@ export const postComment = TryCatch(async (req, res, next) => {
         message: "Commented successfully",
     });
 });
+export const getComments = TryCatch(async (req, res, next) => {
+    const { slug } = req.params;
+    if (!slug) {
+        return next(new ErrorHandler(404, "Post not found"));
+    }
+    const comments = await prisma.comment.findMany({
+        where: { post: { slug } },
+        orderBy: {
+            createdAt: "desc",
+        },
+        include: {
+            replies: {
+                include: {
+                    user: {
+                        select: {
+                            name: true,
+                            email: true,
+                            profile: {
+                                select: {
+                                    avatar: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            user: {
+                select: {
+                    name: true,
+                    email: true,
+                    profile: {
+                        select: {
+                            avatar: true,
+                        },
+                    },
+                },
+            },
+        },
+    });
+    if (!comments) {
+        return next(new ErrorHandler(404, "No comments found on this post"));
+    }
+    res.status(200).json({
+        success: true,
+        comments,
+    });
+});
 export const commentReply = TryCatch(async (req, res, next) => {
     const { id } = req.user;
     const { reply, commentId } = req.body;
@@ -413,10 +441,14 @@ export const postLike = TryCatch(async (req, res, next) => {
         message = "Post liked successfully";
     }
     likeCount = await prisma.like.count({ where: { postId } });
-    //Note pusher implement
+    await pusher.trigger("post-channel", "like-updated", {
+        postId,
+        likeCount,
+    });
     res.status(200).json({
         success: true,
         message,
+        likeCount,
     });
 });
 export const likedPost = TryCatch(async (req, res, next) => {

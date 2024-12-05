@@ -10,6 +10,7 @@ import {
   getAllPostAdmin,
   getAuthorPost,
   getCategory,
+  getComments,
   getSinglePost,
   likedPost,
   postComment,
@@ -28,15 +29,16 @@ const router = Router();
 
 router.post("/create-post", isAuthenticated, isAuthorOrAdmin, createPost);
 router.get("/get-author-post", isAuthenticated, isAuthorOrAdmin, getAuthorPost);
-router.get("/get-single-post/:slug", isAuthenticated, getSinglePost);
+router.get("/get-single-post/:slug", getSinglePost);
 router.put("/publish-post/:id", isAuthenticated, isAuthorOrAdmin, publishPost);
 router.put("/update-post/:id", isAuthenticated, isAuthorOrAdmin, updatePost);
 router.delete("/delete-post/:id", isAuthenticated, isAuthorOrAdmin, deletePost);
 router.get("/get-all-posts", isAuthenticated, getAllPost);
 router.get("/get-category", getCategory);
 router.post("/post-comment/:slug", isAuthenticated, postComment);
+router.get("/get-comments/:slug", getComments);
 router.post("/comment-reply", isAuthenticated, commentReply);
-router.post("/post-view/:slug", isAuthenticated, postviews);
+router.post("/post-view/:slug", postviews);
 router.post("/like-post", isAuthenticated, postLike);
 router.get("/liked-post", isAuthenticated, likedPost);
 router.get("/get-all-post-admin", isAuthenticated, isAdmin, getAllPostAdmin);

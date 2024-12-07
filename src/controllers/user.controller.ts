@@ -284,6 +284,38 @@ export const getUser = TryCatch(
   }
 );
 
+export const getAuthorDetails = TryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const id = req.params.id;
+    const author = await prisma.user.findUnique({
+      where: { id },
+      include: {
+        posts: {
+          where: { published: true },
+          include: {
+            likes: true,
+            comments: true,
+          },
+        },
+        profile: {
+          include: {
+            social: true,
+          },
+        },
+      },
+    });
+
+    if (!author) {
+      return next(new ErrorHandler(404, "User not found"));
+    }
+
+    res.status(200).json({
+      success: true,
+      author,
+    });
+  }
+);
+
 interface ISocialAuth {
   name: string;
   email: string;

@@ -33,7 +33,7 @@ router.get("/get-single-post/:slug", getSinglePost);
 router.put("/publish-post/:id", isAuthenticated, isAuthorOrAdmin, publishPost);
 router.put("/update-post/:id", isAuthenticated, isAuthorOrAdmin, updatePost);
 router.delete("/delete-post/:id", isAuthenticated, isAuthorOrAdmin, deletePost);
-router.get("/get-all-posts", isAuthenticated, getAllPost);
+router.get("/get-all-posts", getAllPost);
 router.get("/get-category", getCategory);
 router.post("/post-comment/:slug", isAuthenticated, postComment);
 router.get("/get-comments/:slug", getComments);

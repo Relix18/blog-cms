@@ -4,6 +4,7 @@ import {
   deleteUser,
   forgotPassword,
   getAllUser,
+  getAuthorDetails,
   getUser,
   getUserDetails,
   login,
@@ -31,6 +32,7 @@ router.post("/social", socialAuth);
 router.post("/forget-password", forgotPassword);
 router.post("/reset-password/:token", resetPassword);
 router.get("/me", isAuthenticated, getUser);
+router.get("/get-author-profile/:id", getAuthorDetails);
 router.put("/update-profile", isAuthenticated, updateProfile);
 router.put("/update-avatar", isAuthenticated, updataAvatar);
 router.put("/change-password", isAuthenticated, updatePassword);

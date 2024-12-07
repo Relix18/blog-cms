@@ -52,6 +52,13 @@ export const featuredPost = TryCatch(
       orderBy: {
         views: "desc",
       },
+      include: {
+        author: {
+          include: {
+            profile: true,
+          },
+        },
+      },
       take: 3,
     });
 
@@ -68,12 +75,91 @@ export const latestPost = TryCatch(
       orderBy: {
         publishedAt: "desc",
       },
+      include: {
+        author: {
+          include: {
+            profile: true,
+          },
+        },
+      },
       take: 10,
     });
 
     res.status(200).json({
       success: true,
       latestPost,
+    });
+  }
+);
+
+export const popularCategory = TryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const popularCategory = await prisma.category.findMany({
+      select: {
+        id: true,
+        value: true,
+        label: true,
+        _count: {
+          select: {
+            posts: true,
+          },
+        },
+      },
+      orderBy: {
+        posts: {
+          _count: "desc",
+        },
+      },
+      take: 20,
+    });
+
+    res.status(200).json({
+      success: true,
+      popularCategory,
+    });
+  }
+);
+
+export const featuredAuthor = TryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const authorPostViews = await prisma.post.groupBy({
+      by: ["authorId"],
+      _sum: {
+        views: true,
+      },
+      orderBy: {
+        _sum: {
+          views: "desc",
+        },
+      },
+      take: 1,
+    });
+
+    const featuredAuthor = await prisma.user.findUnique({
+      where: {
+        id: authorPostViews[0].authorId,
+      },
+      select: {
+        id: true,
+        name: true,
+        _count: {
+          select: {
+            posts: true,
+          },
+        },
+
+        profile: {
+          select: {
+            avatar: true,
+            bio: true,
+          },
+        },
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      featuredAuthor,
     });
   }
 );

@@ -105,6 +105,8 @@ export const getAuthorPost = TryCatch(async (req, res, next) => {
     const post = await prisma.post.findMany({
         where: { authorId: user.id },
         include: {
+            likes: true,
+            comments: true,
             categories: {
                 select: {
                     category: {
@@ -131,6 +133,7 @@ export const getSinglePost = TryCatch(async (req, res, next) => {
                 select: {
                     name: true,
                     email: true,
+                    id: true,
                 },
             },
             categories: {
@@ -464,30 +467,14 @@ export const likedPost = TryCatch(async (req, res, next) => {
                     id: true,
                     title: true,
                     slug: true,
-                    featuredImage: true,
-                    views: true,
-                    likes: {
-                        select: { id: true }, // Include the number of likes
-                    },
-                    author: {
-                        select: { id: true, name: true }, // Include author details
-                    },
+                    description: true,
                 },
             },
         },
     });
-    const result = likedPost.map((like) => ({
-        id: like.post.id,
-        title: like.post.title,
-        slug: like.post.slug,
-        featuredImage: like.post.featuredImage,
-        views: like.post.views,
-        likeCount: like.post.likes.length,
-        author: like.post.author,
-    }));
     res.status(200).json({
         success: true,
-        result,
+        likedPost,
     });
 });
 //Admin

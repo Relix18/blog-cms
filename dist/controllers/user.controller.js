@@ -188,6 +188,33 @@ export const getUser = TryCatch(async (req, res, next) => {
         user,
     });
 });
+export const getAuthorDetails = TryCatch(async (req, res, next) => {
+    const id = req.params.id;
+    const author = await prisma.user.findUnique({
+        where: { id },
+        include: {
+            posts: {
+                where: { published: true },
+                include: {
+                    likes: true,
+                    comments: true,
+                },
+            },
+            profile: {
+                include: {
+                    social: true,
+                },
+            },
+        },
+    });
+    if (!author) {
+        return next(new ErrorHandler(404, "User not found"));
+    }
+    res.status(200).json({
+        success: true,
+        author,
+    });
+});
 export const socialAuth = TryCatch(async (req, res, next) => {
     const { name, email, avatar } = req.body;
     const user = await prisma.user.findUnique({

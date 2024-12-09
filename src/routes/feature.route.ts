@@ -2,10 +2,12 @@ import express from "express";
 import {
   featuredAuthor,
   featuredPost,
+  getRecentActivity,
   latestPost,
   popularCategory,
   relatedPost,
 } from "../controllers/feature.controller.js";
+import { isAuthenticated } from "../middlewares/auth.js";
 
 const router = express.Router();
 
@@ -14,5 +16,6 @@ router.get("/featured-post", featuredPost);
 router.get("/latest-post", latestPost);
 router.get("/popular-categories", popularCategory);
 router.get("/featured-author", featuredAuthor);
+router.get("/recent-activity", isAuthenticated, getRecentActivity);
 
 export default router;

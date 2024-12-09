@@ -11,14 +11,8 @@ import {
 import jwt, { Secret } from "jsonwebtoken";
 import crypto from "crypto";
 import { IRegistration } from "../types/types.js";
-import ejs from "ejs";
-import path from "path";
 import sendEmail from "../utils/sendMail.js";
-import { fileURLToPath } from "url";
 import { v2 as cloudinary } from "cloudinary";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 export const register = TryCatch(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -47,10 +41,6 @@ export const register = TryCatch(
       expires: new Date(Date.now() + 60 * 60 * 1000),
     };
     const data = { user: { name: user.name }, otp };
-    const html = await ejs.renderFile(
-      path.join(__dirname, "../../src/mails/activation-mail.ejs"),
-      data
-    );
 
     try {
       await sendEmail({
@@ -189,10 +179,6 @@ export const resendOtp = TryCatch(
     });
 
     const data = { user: { name: user.name }, otp };
-    await ejs.renderFile(
-      path.join(__dirname, "../../src/mails/activation-mail.ejs"),
-      data
-    );
 
     try {
       await sendEmail({
@@ -389,10 +375,6 @@ export const forgotPassword = TryCatch(
     const resetPasswordLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
     const data = { link: resetPasswordLink };
-    const html = await ejs.renderFile(
-      path.join(__dirname, "../../src/mails/reset-password.ejs"),
-      data
-    );
 
     try {
       await sendEmail({
@@ -633,6 +615,47 @@ export const updatePassword = TryCatch(
     res
       .status(200)
       .json({ success: true, message: "Password updated successfully" });
+  }
+);
+
+export const authorRequest = TryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const id = req.user?.id;
+
+    if (!id) {
+      return next(new ErrorHandler(400, "Please login to access the resource"));
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (!user) {
+      return next(new ErrorHandler(404, "User not found."));
+    }
+
+    const reason =
+      "I am passionate about writing and want to share my expertise in technology, programming, and personal growth. I believe my articles will provide valuable insights to the readers of Orbit Blog and contribute to building an engaging community. I would love the opportunity to inspire and educate others through your platform.";
+
+    const data = { name: user?.name, email: user?.email, userReason: reason };
+
+    //Notification
+
+    try {
+      await sendEmail({
+        email: process.env.ADMIN_MAIL || "",
+        subject: "New Author Request on Orbit Blog",
+        template: "author-request.ejs",
+        data,
+      });
+    } catch (error) {
+      return next(new ErrorHandler(400, error as string));
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "You will get the mail within 24 hours.",
+    });
   }
 );
 

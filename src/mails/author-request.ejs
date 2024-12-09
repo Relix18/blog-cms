@@ -1,0 +1,95 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Author Request - Orbit Blog</title>
+    <style>
+      /* General Reset */
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: "Arial", sans-serif;
+        background-color: #f4f4f4;
+        color: #333;
+      }
+      .container {
+        max-width: 600px;
+        margin: 20px auto;
+        padding: 20px;
+        background-color: #ffffff;
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        text-align: center;
+        padding: 20px 0;
+        border-bottom: 2px solid #eaeaea;
+      }
+
+      .header h1 {
+        font-size: 24px;
+        margin: 0;
+        color: #c026d3;
+      }
+      .content {
+        padding: 20px;
+      }
+      .content h2 {
+        font-size: 20px;
+        color: #444;
+      }
+      .content p {
+        font-size: 16px;
+        line-height: 1.5;
+        color: #666;
+      }
+      .content .details {
+        margin: 20px 0;
+        padding: 15px;
+        background-color: #f9f9f9;
+        border: 1px solid #eaeaea;
+        border-radius: 8px;
+      }
+      .details p {
+        margin: 5px 0;
+      }
+      .footer {
+        margin-top: 30px;
+        text-align: center;
+        font-size: 14px;
+        color: #aaa;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Orbit Blog</h1>
+      </div>
+      <div class="content">
+        <h2>New Author Request</h2>
+        <p>Dear Admin,</p>
+        <p>
+          A user has submitted a request to become an author on Orbit Blog.
+          Below are their details:
+        </p>
+        <div class="details">
+          <p><strong>Full Name:</strong> <%= name %></p>
+          <p><strong>Email Address:</strong> <%= email %></p>
+          <p><strong>Reason for Request:</strong></p>
+          <p><em><%= userReason %></em></p>
+        </div>
+        <p>
+          Please review this request and take appropriate action. You can
+          approve or decline the request in the admin dashboard.
+        </p>
+      </div>
+      <div class="footer">
+        <p>
+          &copy; <%= new Date().getFullYear() %> Orbit Blog. All rights
+          reserved.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

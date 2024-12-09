@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   activateUser,
+  authorRequest,
   deleteUser,
   forgotPassword,
   getAllUser,
@@ -32,6 +33,7 @@ router.post("/social", socialAuth);
 router.post("/forget-password", forgotPassword);
 router.post("/reset-password/:token", resetPassword);
 router.get("/me", isAuthenticated, getUser);
+router.post("/author-request", isAuthenticated, authorRequest);
 router.get("/get-author-profile/:id", getAuthorDetails);
 router.put("/update-profile", isAuthenticated, updateProfile);
 router.put("/update-avatar", isAuthenticated, updataAvatar);

@@ -7,6 +7,7 @@ import cookieParser from "cookie-parser";
 import user from "./routes/user.route.js";
 import post from "./routes/post.route.js";
 import feature from "./routes/feature.route.js";
+import analytics from "./routes/analytics.route.js";
 
 dotenv.config({ path: "./.env" });
 
@@ -27,6 +28,7 @@ app.get("/", (req, res) => {
 app.use("/api/v1", user);
 app.use("/api/v1", post);
 app.use("/api/v1", feature);
+app.use("/api/v1", analytics);
 
 app.get("*", (req, res) => {
   res.status(404).json({

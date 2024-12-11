@@ -4,7 +4,7 @@ import {
   featuredPost,
   getRecentActivity,
   latestPost,
-  popularCategory,
+  popularTags,
   relatedPost,
 } from "../controllers/feature.controller.js";
 import { isAuthenticated } from "../middlewares/auth.js";
@@ -14,7 +14,7 @@ const router = express.Router();
 router.post("/related-post", relatedPost);
 router.get("/featured-post", featuredPost);
 router.get("/latest-post", latestPost);
-router.get("/popular-categories", popularCategory);
+router.get("/popular-tags", popularTags);
 router.get("/featured-author", featuredAuthor);
 router.get("/recent-activity", isAuthenticated, getRecentActivity);
 

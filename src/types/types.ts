@@ -21,7 +21,9 @@ export interface IPost {
   title: string;
   slug: string;
   content: string;
-  categories: string[];
+  category: string;
+  categoryId: number;
+  tags: string[];
   description: string;
   featuredImage: string;
   published: boolean;

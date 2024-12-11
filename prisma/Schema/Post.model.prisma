@@ -4,7 +4,9 @@ model Post {
     slug            String         @unique
     content         String
     description     String 
-    categories      PostCategory[] 
+    category        Category @relation(fields: [categoryId],references: [id])
+    categoryId      Int
+    tags            PostTags[] 
     featuredImage   String?
     featuredImageId String?
     published       Boolean        @default(false)
@@ -31,12 +33,18 @@ model Like{
     createdAt DateTime @default(now())
 }
 
+model Tag {
+    id    Int       @id @default(autoincrement())
+    value  String    @unique
+    label String @unique    
+    posts PostTags[] 
+}
+
 model Category {
     id    Int       @id @default(autoincrement())
     value  String    @unique
     label String @unique    
-    posts PostCategory[] 
-
+    post    Post[]
 }
 
 model Comment {
@@ -60,10 +68,10 @@ model Reply {
     createdAt DateTime @default(now())
 }
 
-model PostCategory {
+model PostTags {
     post       Post      @relation(fields: [postId], references: [id])
     postId     Int
-    category   Category  @relation(fields: [categoryId], references: [id])
-    categoryId Int
-    @@id([postId, categoryId]) 
+    tag   Tag  @relation(fields: [tagsId], references: [id])
+    tagsId Int
+    @@id([postId, tagsId]) 
 }

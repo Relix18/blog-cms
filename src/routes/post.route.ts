@@ -12,6 +12,7 @@ import {
   getCategory,
   getComments,
   getSinglePost,
+  getTags,
   likedPost,
   postComment,
   postLike,
@@ -35,6 +36,7 @@ router.put("/update-post/:id", isAuthenticated, isAuthorOrAdmin, updatePost);
 router.delete("/delete-post/:id", isAuthenticated, isAuthorOrAdmin, deletePost);
 router.get("/get-all-posts", getAllPost);
 router.get("/get-category", getCategory);
+router.get("/get-tags", getTags);
 router.post("/post-comment/:slug", isAuthenticated, postComment);
 router.get("/get-comments/:slug", getComments);
 router.post("/comment-reply", isAuthenticated, commentReply);

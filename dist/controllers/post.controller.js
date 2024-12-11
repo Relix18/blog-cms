@@ -6,7 +6,7 @@ import calculateReadingTime from "../utils/readingTime.js";
 import pusher from "../utils/pusher.js";
 //Author
 export const createPost = TryCatch(async (req, res, next) => {
-    let { title, slug, content, categories, description, featuredImage, metaTitle, metaDescription, metaKeyword, } = req.body;
+    let { title, slug, content, category, tags, description, featuredImage, metaTitle, metaDescription, metaKeyword, } = req.body;
     const user = req.user;
     if (!user) {
         return next(new ErrorHandler(400, "Please login to access the reasource"));
@@ -16,7 +16,8 @@ export const createPost = TryCatch(async (req, res, next) => {
         !slug ||
         !description ||
         !featuredImage ||
-        !categories ||
+        !category ||
+        !tags ||
         !metaTitle ||
         !metaDescription ||
         !metaKeyword) {
@@ -33,16 +34,23 @@ export const createPost = TryCatch(async (req, res, next) => {
     catch (error) {
         return next(new ErrorHandler(400, "An error occurred"));
     }
-    const categoriesToConnect = await Promise.all(categories.map(async (category) => {
-        const label = category.charAt(0).toUpperCase() + category.slice(1);
-        const value = category.toLowerCase();
-        const existingCategory = await prisma.category.upsert({
+    const tagsToConnect = await Promise.all(tags.map(async (tag) => {
+        const label = tag.charAt(0).toUpperCase() + tag.slice(1);
+        const value = tag.toLowerCase();
+        const existingCategory = await prisma.tag.upsert({
             where: { value },
             update: {},
             create: { value, label },
         });
         return { id: existingCategory.id };
     }));
+    const label = category.charAt(0).toUpperCase() + category.slice(1);
+    const value = category.toLowerCase();
+    const categoryId = await prisma.category.upsert({
+        where: { value },
+        update: {},
+        create: { value, label },
+    });
     let isSlugExists = await prisma.post.findUnique({
         where: { slug },
     });
@@ -63,9 +71,10 @@ export const createPost = TryCatch(async (req, res, next) => {
             minRead,
             slug,
             authorId: user.id,
-            categories: {
-                create: categoriesToConnect.map((category) => ({
-                    category: { connect: { id: category.id } },
+            categoryId: categoryId.id,
+            tags: {
+                create: tagsToConnect.map((tag) => ({
+                    tag: { connect: { id: tag.id } },
                 })),
             },
             metaTitle,
@@ -107,9 +116,10 @@ export const getAuthorPost = TryCatch(async (req, res, next) => {
         include: {
             likes: true,
             comments: true,
-            categories: {
+            category: true,
+            tags: {
                 select: {
-                    category: {
+                    tag: {
                         select: {
                             value: true,
                             label: true,
@@ -136,9 +146,10 @@ export const getSinglePost = TryCatch(async (req, res, next) => {
                     id: true,
                 },
             },
-            categories: {
+            category: true,
+            tags: {
                 select: {
-                    category: {
+                    tag: {
                         select: {
                             value: true,
                             label: true,
@@ -160,28 +171,36 @@ export const getSinglePost = TryCatch(async (req, res, next) => {
 export const updatePost = TryCatch(async (req, res, next) => {
     const id = req.params.id;
     const postId = parseInt(id);
-    let { title, slug, content, categories, featuredImage, metaTitle, metaDescription, metaKeyword, } = req.body;
+    let { title, slug, content, category, tags, featuredImage, metaTitle, metaDescription, metaKeyword, } = req.body;
     if (!title ||
         !content ||
         !slug ||
         !featuredImage ||
-        !categories ||
+        !category ||
+        !tags ||
         !metaDescription ||
         !metaTitle ||
         !metaKeyword) {
         return next(new ErrorHandler(400, "Please enter all fields"));
     }
-    const categoriesToConnect = await Promise.all(categories.map(async (category) => {
-        const label = category.charAt(0).toUpperCase() + category.slice(1);
-        const value = category.toLowerCase();
-        const existingCategory = await prisma.category.upsert({
+    const tagsToConnect = await Promise.all(tags.map(async (tag) => {
+        const label = tag.charAt(0).toUpperCase() + tag.slice(1);
+        const value = tag.toLowerCase();
+        const existingTags = await prisma.tag.upsert({
             where: { value },
             update: {},
             create: { label, value },
         });
-        return { id: existingCategory.id };
+        return { id: existingTags.id };
     }));
-    await prisma.postCategory.deleteMany({
+    const label = category.charAt(0).toUpperCase() + category.slice(1);
+    const value = category.toLowerCase();
+    const categoryId = await prisma.category.upsert({
+        where: { value },
+        update: {},
+        create: { value, label },
+    });
+    await prisma.postTags.deleteMany({
         where: { postId },
     });
     const oldPost = await prisma.post.findUnique({
@@ -211,9 +230,10 @@ export const updatePost = TryCatch(async (req, res, next) => {
             featuredImageId,
             minRead,
             slug,
-            categories: {
-                create: categoriesToConnect.map((category) => ({
-                    category: { connect: { id: category.id } },
+            categoryId: categoryId.id,
+            tags: {
+                create: tagsToConnect.map((tag) => ({
+                    tag: { connect: { id: tag.id } },
                 })),
             },
             metaTitle,
@@ -251,7 +271,7 @@ export const deletePost = TryCatch(async (req, res, next) => {
     await prisma.like.deleteMany({
         where: { postId },
     });
-    await prisma.postCategory.deleteMany({
+    await prisma.postTags.deleteMany({
         where: { postId },
     });
     await prisma.post.delete({
@@ -269,9 +289,10 @@ export const getAllPost = TryCatch(async (req, res, next) => {
     const posts = await prisma.post.findMany({
         where: { published: true },
         include: {
-            categories: {
+            category: true,
+            tags: {
                 select: {
-                    category: {
+                    tag: {
                         select: {
                             value: true,
                             label: true,
@@ -298,6 +319,13 @@ export const getCategory = TryCatch(async (req, res, next) => {
     res.status(200).json({
         success: true,
         categories,
+    });
+});
+export const getTags = TryCatch(async (req, res, next) => {
+    const tags = await prisma.tag.findMany();
+    res.status(200).json({
+        success: true,
+        tags,
     });
 });
 export const postComment = TryCatch(async (req, res, next) => {
@@ -481,9 +509,9 @@ export const likedPost = TryCatch(async (req, res, next) => {
 export const getAllPostAdmin = TryCatch(async (req, res, next) => {
     const posts = await prisma.post.findMany({
         include: {
-            categories: {
+            tags: {
                 include: {
-                    category: {
+                    tag: {
                         select: {
                             value: true,
                             label: true,
@@ -515,7 +543,7 @@ export const deletePosts = TryCatch(async (req, res, next) => {
     await prisma.like.deleteMany({
         where: { postId },
     });
-    await prisma.postCategory.deleteMany({
+    await prisma.postTags.deleteMany({
         where: { postId },
     });
     await prisma.post.delete({

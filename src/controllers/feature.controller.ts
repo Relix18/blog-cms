@@ -14,26 +14,18 @@ export const relatedPost = TryCatch(
     const post = await prisma.category.findMany({
       where: { value },
       include: {
-        posts: {
+        post: {
           include: {
-            post: {
-              include: {
-                author: true,
-              },
-            },
+            author: true,
           },
-
           where: {
-            postId: {
+            id: {
               not: currentId,
             },
           },
           orderBy: {
-            post: {
-              views: "desc",
-            },
+            views: "desc",
           },
-
           take: 3,
         },
       },
@@ -92,9 +84,9 @@ export const latestPost = TryCatch(
   }
 );
 
-export const popularCategory = TryCatch(
+export const popularTags = TryCatch(
   async (req: Request, res: Response, next: NextFunction) => {
-    const popularCategory = await prisma.category.findMany({
+    const popularTags = await prisma.tag.findMany({
       select: {
         id: true,
         value: true,
@@ -115,7 +107,7 @@ export const popularCategory = TryCatch(
 
     res.status(200).json({
       success: true,
-      popularCategory,
+      popularTags,
     });
   }
 );

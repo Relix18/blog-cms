@@ -14,7 +14,8 @@ export const createPost = TryCatch(
       title,
       slug,
       content,
-      categories,
+      category,
+      tags,
       description,
       featuredImage,
       metaTitle,
@@ -35,7 +36,8 @@ export const createPost = TryCatch(
       !slug ||
       !description ||
       !featuredImage ||
-      !categories ||
+      !category ||
+      !tags ||
       !metaTitle ||
       !metaDescription ||
       !metaKeyword
@@ -54,11 +56,11 @@ export const createPost = TryCatch(
       return next(new ErrorHandler(400, "An error occurred"));
     }
 
-    const categoriesToConnect = await Promise.all(
-      categories.map(async (category) => {
-        const label = category.charAt(0).toUpperCase() + category.slice(1);
-        const value = category.toLowerCase();
-        const existingCategory = await prisma.category.upsert({
+    const tagsToConnect = await Promise.all(
+      tags.map(async (tag) => {
+        const label = tag.charAt(0).toUpperCase() + tag.slice(1);
+        const value = tag.toLowerCase();
+        const existingCategory = await prisma.tag.upsert({
           where: { value },
           update: {},
           create: { value, label },
@@ -66,6 +68,15 @@ export const createPost = TryCatch(
         return { id: existingCategory.id };
       })
     );
+
+    const label = category.charAt(0).toUpperCase() + category.slice(1);
+    const value = category.toLowerCase();
+
+    const categoryId = await prisma.category.upsert({
+      where: { value },
+      update: {},
+      create: { value, label },
+    });
 
     let isSlugExists = await prisma.post.findUnique({
       where: { slug },
@@ -91,9 +102,10 @@ export const createPost = TryCatch(
         minRead,
         slug,
         authorId: user.id,
-        categories: {
-          create: categoriesToConnect.map((category) => ({
-            category: { connect: { id: category.id } },
+        categoryId: categoryId.id,
+        tags: {
+          create: tagsToConnect.map((tag) => ({
+            tag: { connect: { id: tag.id } },
           })),
         },
         metaTitle,
@@ -148,9 +160,10 @@ export const getAuthorPost = TryCatch(
       include: {
         likes: true,
         comments: true,
-        categories: {
+        category: true,
+        tags: {
           select: {
-            category: {
+            tag: {
               select: {
                 value: true,
                 label: true,
@@ -183,9 +196,10 @@ export const getSinglePost = TryCatch(
             id: true,
           },
         },
-        categories: {
+        category: true,
+        tags: {
           select: {
-            category: {
+            tag: {
               select: {
                 value: true,
                 label: true,
@@ -216,7 +230,8 @@ export const updatePost = TryCatch(
       title,
       slug,
       content,
-      categories,
+      category,
+      tags,
       featuredImage,
       metaTitle,
       metaDescription,
@@ -228,7 +243,8 @@ export const updatePost = TryCatch(
       !content ||
       !slug ||
       !featuredImage ||
-      !categories ||
+      !category ||
+      !tags ||
       !metaDescription ||
       !metaTitle ||
       !metaKeyword
@@ -236,20 +252,29 @@ export const updatePost = TryCatch(
       return next(new ErrorHandler(400, "Please enter all fields"));
     }
 
-    const categoriesToConnect = await Promise.all(
-      categories.map(async (category) => {
-        const label = category.charAt(0).toUpperCase() + category.slice(1);
-        const value = category.toLowerCase();
-        const existingCategory = await prisma.category.upsert({
+    const tagsToConnect = await Promise.all(
+      tags.map(async (tag) => {
+        const label = tag.charAt(0).toUpperCase() + tag.slice(1);
+        const value = tag.toLowerCase();
+        const existingTags = await prisma.tag.upsert({
           where: { value },
           update: {},
           create: { label, value },
         });
-        return { id: existingCategory.id };
+        return { id: existingTags.id };
       })
     );
 
-    await prisma.postCategory.deleteMany({
+    const label = category.charAt(0).toUpperCase() + category.slice(1);
+    const value = category.toLowerCase();
+
+    const categoryId = await prisma.category.upsert({
+      where: { value },
+      update: {},
+      create: { value, label },
+    });
+
+    await prisma.postTags.deleteMany({
       where: { postId },
     });
 
@@ -282,9 +307,10 @@ export const updatePost = TryCatch(
         featuredImageId,
         minRead,
         slug,
-        categories: {
-          create: categoriesToConnect.map((category) => ({
-            category: { connect: { id: category.id } },
+        categoryId: categoryId.id,
+        tags: {
+          create: tagsToConnect.map((tag) => ({
+            tag: { connect: { id: tag.id } },
           })),
         },
         metaTitle,
@@ -332,7 +358,7 @@ export const deletePost = TryCatch(
       where: { postId },
     });
 
-    await prisma.postCategory.deleteMany({
+    await prisma.postTags.deleteMany({
       where: { postId },
     });
 
@@ -356,9 +382,10 @@ export const getAllPost = TryCatch(
       where: { published: true },
 
       include: {
-        categories: {
+        category: true,
+        tags: {
           select: {
-            category: {
+            tag: {
               select: {
                 value: true,
                 label: true,
@@ -390,6 +417,17 @@ export const getCategory = TryCatch(
     res.status(200).json({
       success: true,
       categories,
+    });
+  }
+);
+
+export const getTags = TryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const tags = await prisma.tag.findMany();
+
+    res.status(200).json({
+      success: true,
+      tags,
     });
   }
 );
@@ -623,9 +661,9 @@ export const getAllPostAdmin = TryCatch(
   async (req: Request, res: Response, next: NextFunction) => {
     const posts = await prisma.post.findMany({
       include: {
-        categories: {
+        tags: {
           include: {
-            category: {
+            tag: {
               select: {
                 value: true,
                 label: true,
@@ -665,7 +703,7 @@ export const deletePosts = TryCatch(
       where: { postId },
     });
 
-    await prisma.postCategory.deleteMany({
+    await prisma.postTags.deleteMany({
       where: { postId },
     });
 

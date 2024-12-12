@@ -656,6 +656,84 @@ export const likedPost = TryCatch(
   }
 );
 
+export const getRecentActivity = TryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "User not authenticated",
+      });
+    }
+
+    const [likedPosts, comments, replies] = await Promise.all([
+      prisma.like.findMany({
+        where: { userId },
+        include: {
+          post: true,
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.comment.findMany({
+        where: { userId },
+        include: { post: true },
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.reply.findMany({
+        where: { userId },
+        include: {
+          comment: { include: { post: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+    ]);
+
+    const activities = [
+      ...likedPosts.map((like) => ({
+        type: "LIKE",
+        createdAt: like.createdAt,
+        post: {
+          id: like.postId,
+          slug: like.post.slug,
+          title: like.post.title,
+          description: like.post.description,
+        },
+      })),
+      ...comments.map((comment) => ({
+        type: "COMMENT",
+        content: comment.content,
+        createdAt: comment.createdAt,
+        post: {
+          id: comment.postId,
+          slug: comment.post.slug,
+          title: comment.post.title,
+          description: comment.post.description,
+        },
+      })),
+      ...replies.map((reply) => ({
+        type: "REPLY",
+        content: reply.content,
+        createdAt: reply.createdAt,
+        post: {
+          id: reply.comment.postId,
+          slug: reply.comment.post.slug,
+          title: reply.comment.post.title,
+          description: reply.comment.post.description,
+        },
+      })),
+    ].sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    return res.status(200).json({
+      success: true,
+      activities,
+    });
+  }
+);
+
 //Admin
 export const getAllPostAdmin = TryCatch(
   async (req: Request, res: Response, next: NextFunction) => {

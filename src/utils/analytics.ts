@@ -1,4 +1,4 @@
-import { endOfMonth, format, startOfMonth, subMonths } from "date-fns";
+import { subMonths } from "date-fns";
 import prisma from "../lib/db.js";
 
 interface IAnalytics {
@@ -78,10 +78,46 @@ const getAllPostsAnalytics = async ({
       views: true,
       likes: true,
       comments: true,
+      category: true,
       createdAt: true,
     },
   });
   const totalPosts = postsData.length;
+
+  const categoryCounts = postsData.reduce((counts, post) => {
+    const category = post.category || "Uncategorized";
+    counts[category.label] = (counts[category.label] || 0) + 1;
+    return counts;
+  }, {} as Record<string, number>);
+
+  const categoryPercentages = Object.entries(categoryCounts)
+    .map(([category, count]) => ({
+      name: category,
+      value: (count / totalPosts) * 100,
+      count,
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 4);
+
+  const categoryMetrics = categoryPercentages.map(({ name }) => {
+    const filteredPosts = postsData.filter(
+      (post) => (post.category.label || "Uncategorized") === name
+    );
+    const views = filteredPosts.reduce((sum, post) => sum + post.views, 0);
+    const comments = commentsData.filter((comment) =>
+      filteredPosts.some((post) => post.id === comment.postId)
+    ).length;
+    const likes = likesData.filter((like) =>
+      filteredPosts.some((post) => post.id === like.postId)
+    ).length;
+
+    return {
+      name,
+      views,
+      comments,
+      likes,
+    };
+  });
 
   const lastPeriodViewsData = await prisma.post.findMany({
     where: {
@@ -172,6 +208,8 @@ const getAllPostsAnalytics = async ({
     totalPosts,
     posts: postsData,
     growth: growthDetails,
+    categoryPercentages,
+    categoryMetrics,
   };
 };
 

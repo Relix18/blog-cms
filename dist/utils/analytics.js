@@ -60,10 +60,36 @@ const getAllPostsAnalytics = async ({ startDate, endDate, authorId, monthsForPos
             views: true,
             likes: true,
             comments: true,
+            category: true,
             createdAt: true,
         },
     });
     const totalPosts = postsData.length;
+    const categoryCounts = postsData.reduce((counts, post) => {
+        const category = post.category || "Uncategorized";
+        counts[category.label] = (counts[category.label] || 0) + 1;
+        return counts;
+    }, {});
+    const categoryPercentages = Object.entries(categoryCounts)
+        .map(([category, count]) => ({
+        name: category,
+        value: (count / totalPosts) * 100,
+        count,
+    }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 4);
+    const categoryMetrics = categoryPercentages.map(({ name }) => {
+        const filteredPosts = postsData.filter((post) => (post.category.label || "Uncategorized") === name);
+        const views = filteredPosts.reduce((sum, post) => sum + post.views, 0);
+        const comments = commentsData.filter((comment) => filteredPosts.some((post) => post.id === comment.postId)).length;
+        const likes = likesData.filter((like) => filteredPosts.some((post) => post.id === like.postId)).length;
+        return {
+            name,
+            views,
+            comments,
+            likes,
+        };
+    });
     const lastPeriodViewsData = await prisma.post.findMany({
         where: {
             authorId,
@@ -143,6 +169,8 @@ const getAllPostsAnalytics = async ({ startDate, endDate, authorId, monthsForPos
         totalPosts,
         posts: postsData,
         growth: growthDetails,
+        categoryPercentages,
+        categoryMetrics,
     };
 };
 export default getAllPostsAnalytics;

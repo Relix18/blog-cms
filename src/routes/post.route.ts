@@ -11,6 +11,7 @@ import {
   getAuthorPost,
   getCategory,
   getComments,
+  getRecentActivity,
   getSinglePost,
   getTags,
   likedPost,
@@ -43,6 +44,7 @@ router.post("/comment-reply", isAuthenticated, commentReply);
 router.post("/post-view/:slug", postviews);
 router.post("/like-post", isAuthenticated, postLike);
 router.get("/liked-post", isAuthenticated, likedPost);
+router.get("/recent-activity", isAuthenticated, getRecentActivity);
 router.get("/get-all-post-admin", isAuthenticated, isAdmin, getAllPostAdmin);
 router.delete("/delete-post-admin", isAuthenticated, isAdmin, deletePosts);
 router.delete("/delete-comment", isAuthenticated, isAdmin, deleteComment);

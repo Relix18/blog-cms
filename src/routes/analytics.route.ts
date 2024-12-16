@@ -1,6 +1,13 @@
 import express from "express";
-import { isAuthenticated, isAuthorOrAdmin } from "../middlewares/auth.js";
-import { getPostAnalytics } from "../controllers/analytic.controller.js";
+import {
+  isAdmin,
+  isAuthenticated,
+  isAuthorOrAdmin,
+} from "../middlewares/auth.js";
+import {
+  getAdminOverview,
+  getPostAnalytics,
+} from "../controllers/analytic.controller.js";
 
 const router = express.Router();
 
@@ -10,5 +17,6 @@ router.get(
   isAuthorOrAdmin,
   getPostAnalytics
 );
+router.get("/admin-overview/:days", isAuthenticated, isAdmin, getAdminOverview);
 
 export default router;

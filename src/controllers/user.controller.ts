@@ -114,6 +114,12 @@ export const activateUser = TryCatch(
       },
     });
 
+    await prisma.profile.create({
+      data: {
+        userId: user.id,
+      },
+    });
+
     sendToken(user, 200, res);
   }
 );

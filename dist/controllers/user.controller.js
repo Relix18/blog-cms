@@ -77,6 +77,11 @@ export const activateUser = TryCatch(async (req, res, next) => {
             password,
         },
     });
+    await prisma.profile.create({
+        data: {
+            userId: user.id,
+        },
+    });
     sendToken(user, 200, res);
 });
 export const resendOtp = TryCatch(async (req, res, next) => {

@@ -38,6 +38,8 @@ model Tag {
     value  String    @unique
     label String @unique    
     posts PostTags[] 
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }
 
 model Category {
@@ -45,6 +47,8 @@ model Category {
     value  String    @unique
     label String @unique    
     post    Post[]
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }
 
 model Comment {

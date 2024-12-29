@@ -412,7 +412,15 @@ export const getAllPost = TryCatch(
 
 export const getCategory = TryCatch(
   async (req: Request, res: Response, next: NextFunction) => {
-    const categories = await prisma.category.findMany();
+    const categories = await prisma.category.findMany({
+      include: {
+        _count: {
+          select: {
+            post: true,
+          },
+        },
+      },
+    });
 
     res.status(200).json({
       success: true,
@@ -423,7 +431,15 @@ export const getCategory = TryCatch(
 
 export const getTags = TryCatch(
   async (req: Request, res: Response, next: NextFunction) => {
-    const tags = await prisma.tag.findMany();
+    const tags = await prisma.tag.findMany({
+      include: {
+        _count: {
+          select: {
+            posts: true,
+          },
+        },
+      },
+    });
 
     res.status(200).json({
       success: true,
@@ -739,6 +755,8 @@ export const getAllPostAdmin = TryCatch(
   async (req: Request, res: Response, next: NextFunction) => {
     const posts = await prisma.post.findMany({
       include: {
+        category: true,
+        author: true,
         tags: {
           include: {
             tag: {
@@ -755,6 +773,91 @@ export const getAllPostAdmin = TryCatch(
     res.status(200).json({
       success: true,
       posts,
+    });
+  }
+);
+
+export const unpublishPost = TryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const id = req.user?.id;
+    const { postId, message } = req.body;
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+    });
+
+    if (user?.role !== "ADMIN") {
+      return next(
+        new ErrorHandler(400, "You are not authorized to perform this action.")
+      );
+    }
+
+    const post = await prisma.post.findUnique({
+      where: { id: postId },
+    });
+
+    if (!post) {
+      return next(new ErrorHandler(404, "Post not found."));
+    }
+
+    await prisma.post.update({
+      where: { id: postId },
+      data: {
+        published: false,
+      },
+    });
+
+    //nodemailer
+
+    res.status(200).json({
+      success: true,
+      message: "Post unpublished and notified the author.",
+    });
+  }
+);
+
+export const editCategory = TryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { id, label, value } = req.body;
+
+    if (!label || !value) {
+      return next(new ErrorHandler(400, "Please provide data."));
+    }
+
+    const categories = await prisma.category.update({
+      where: { id },
+      data: {
+        value,
+        label,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      categories,
+    });
+  }
+);
+
+export const editTag = TryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { id, label, value } = req.body;
+
+    if (!label || !value) {
+      return next(new ErrorHandler(400, "Please provide data."));
+    }
+
+    const tags = await prisma.tag.update({
+      where: { id },
+      data: {
+        value,
+        label,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      tags,
     });
   }
 );

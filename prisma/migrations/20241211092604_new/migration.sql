@@ -40,6 +40,7 @@ CREATE TABLE "Tag" (
     "id" SERIAL NOT NULL,
     "value" TEXT NOT NULL,
     "label" TEXT NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL
 
     CONSTRAINT "Tag_pkey" PRIMARY KEY ("id")
 );
@@ -49,7 +50,8 @@ CREATE TABLE "Category" (
     "id" SERIAL NOT NULL,
     "value" TEXT NOT NULL,
     "label" TEXT NOT NULL,
-
+    "updatedAt" TIMESTAMP(3) NOT NULL
+    
     CONSTRAINT "Category_pkey" PRIMARY KEY ("id")
 );
 

@@ -71,6 +71,9 @@ export const activateUser = TryCatch(async (req, res, next) => {
         return next(new ErrorHandler(400, "Email already exists."));
     }
     const user = await prisma.user.create({
+        omit: {
+            password: false,
+        },
         data: {
             name,
             email,
@@ -141,6 +144,9 @@ export const login = TryCatch(async (req, res, next) => {
         return next(new ErrorHandler(400, "Please enter email and password"));
     }
     const user = await prisma.user.findUnique({
+        omit: {
+            password: false,
+        },
         where: { email },
         include: {
             profile: {
@@ -216,6 +222,9 @@ export const getAuthorDetails = TryCatch(async (req, res, next) => {
 export const socialAuth = TryCatch(async (req, res, next) => {
     const { name, email, avatar } = req.body;
     const user = await prisma.user.findUnique({
+        omit: {
+            password: false,
+        },
         where: {
             email,
         },
@@ -229,6 +238,9 @@ export const socialAuth = TryCatch(async (req, res, next) => {
     });
     if (!user) {
         const newUser = await prisma.user.create({
+            omit: {
+                password: false,
+            },
             data: {
                 name,
                 email,
@@ -431,6 +443,9 @@ export const updatePassword = TryCatch(async (req, res, next) => {
         return next(new ErrorHandler(400, "Please enter old and new password"));
     }
     const user = await prisma.user.findUnique({
+        omit: {
+            password: false,
+        },
         where: {
             id,
         },
@@ -499,8 +514,20 @@ export const getUserDetails = TryCatch(async (req, res, next) => {
     const user = await prisma.user.findUnique({
         where: { id },
         include: {
+            _count: {
+                select: {
+                    comments: true,
+                    reply: true,
+                    posts: true,
+                    postLike: true,
+                },
+            },
             posts: true,
-            profile: true,
+            profile: {
+                include: {
+                    social: true,
+                },
+            },
         },
     });
     if (!user) {
@@ -509,6 +536,77 @@ export const getUserDetails = TryCatch(async (req, res, next) => {
     res.status(200).json({
         success: true,
         user,
+    });
+});
+export const getAllComments = TryCatch(async (req, res, next) => {
+    const comments = await prisma.comment.findMany({
+        include: {
+            post: {
+                select: {
+                    slug: true,
+                    id: true,
+                    title: true,
+                },
+            },
+            user: {
+                select: {
+                    name: true,
+                    email: true,
+                },
+            },
+        },
+    });
+    const replyData = await prisma.reply.findMany({
+        include: {
+            comment: {
+                select: {
+                    content: true,
+                    id: true,
+                    user: {
+                        select: {
+                            name: true,
+                            email: true,
+                        },
+                    },
+                    post: {
+                        select: {
+                            slug: true,
+                            id: true,
+                            title: true,
+                        },
+                    },
+                },
+            },
+            user: {
+                select: {
+                    name: true,
+                    email: true,
+                },
+            },
+        },
+    });
+    const replies = replyData.map((r) => ({
+        id: r.id,
+        content: r.content,
+        createdAt: r.createdAt,
+        post: r.comment?.post || null,
+        postId: r.comment?.post.id,
+        user: r.user,
+        parentComment: {
+            id: r.comment?.id || null,
+            content: r.comment?.content || null,
+            user: r.comment?.user || null,
+        },
+        userId: r.userId,
+        type: "Reply",
+    }));
+    const comms = [
+        ...comments.map((c) => ({ ...c, type: "Comment" })),
+        ...replies,
+    ];
+    res.status(200).json({
+        success: true,
+        comms,
     });
 });
 export const updateRole = TryCatch(async (req, res, next) => {

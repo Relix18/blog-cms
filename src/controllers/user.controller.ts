@@ -107,6 +107,9 @@ export const activateUser = TryCatch(
     }
 
     const user = await prisma.user.create({
+      omit: {
+        password: false,
+      },
       data: {
         name,
         email,
@@ -217,6 +220,9 @@ export const login = TryCatch(
     }
 
     const user = await prisma.user.findUnique({
+      omit: {
+        password: false,
+      },
       where: { email },
       include: {
         profile: {
@@ -319,6 +325,9 @@ export const socialAuth = TryCatch(
     const { name, email, avatar } = req.body as ISocialAuth;
 
     const user = await prisma.user.findUnique({
+      omit: {
+        password: false,
+      },
       where: {
         email,
       },
@@ -333,6 +342,9 @@ export const socialAuth = TryCatch(
 
     if (!user) {
       const newUser = await prisma.user.create({
+        omit: {
+          password: false,
+        },
         data: {
           name,
           email,
@@ -587,6 +599,9 @@ export const updatePassword = TryCatch(
     }
 
     const user = await prisma.user.findUnique({
+      omit: {
+        password: false,
+      },
       where: {
         id,
       },
@@ -684,8 +699,20 @@ export const getUserDetails = TryCatch(
     const user = await prisma.user.findUnique({
       where: { id },
       include: {
+        _count: {
+          select: {
+            comments: true,
+            reply: true,
+            posts: true,
+            postLike: true,
+          },
+        },
         posts: true,
-        profile: true,
+        profile: {
+          include: {
+            social: true,
+          },
+        },
       },
     });
 
@@ -696,6 +723,84 @@ export const getUserDetails = TryCatch(
     res.status(200).json({
       success: true,
       user,
+    });
+  }
+);
+
+export const getAllComments = TryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const comments = await prisma.comment.findMany({
+      include: {
+        post: {
+          select: {
+            slug: true,
+            id: true,
+            title: true,
+          },
+        },
+        user: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    const replyData = await prisma.reply.findMany({
+      include: {
+        comment: {
+          select: {
+            content: true,
+            id: true,
+            user: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
+            post: {
+              select: {
+                slug: true,
+                id: true,
+                title: true,
+              },
+            },
+          },
+        },
+        user: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    const replies = replyData.map((r) => ({
+      id: r.id,
+      content: r.content,
+      createdAt: r.createdAt,
+      post: r.comment?.post || null,
+      postId: r.comment?.post.id,
+      user: r.user,
+      parentComment: {
+        id: r.comment?.id || null,
+        content: r.comment?.content || null,
+        user: r.comment?.user || null,
+      },
+      userId: r.userId,
+      type: "Reply",
+    }));
+
+    const comms = [
+      ...comments.map((c) => ({ ...c, type: "Comment" })),
+      ...replies,
+    ];
+
+    res.status(200).json({
+      success: true,
+      comms,
     });
   }
 );

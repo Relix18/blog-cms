@@ -4,6 +4,7 @@ import {
   authorRequest,
   deleteUser,
   forgotPassword,
+  getAllComments,
   getAllUser,
   getAuthorDetails,
   getUser,
@@ -41,6 +42,7 @@ router.put("/change-password", isAuthenticated, updatePassword);
 router.get("/get-all-users", isAuthenticated, isAdmin, getAllUser);
 router.put("/update-role/:id", isAuthenticated, isAdmin, updateRole);
 router.get("/user-details/:id", isAuthenticated, isAdmin, getUserDetails);
+router.get("/get-all-comments", isAuthenticated, isAdmin, getAllComments);
 router.delete("/delete-user/:id", isAuthenticated, isAdmin, deleteUser);
 
 export default router;

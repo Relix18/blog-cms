@@ -784,7 +784,7 @@ export const getAllComments = TryCatch(
       post: r.comment?.post || null,
       postId: r.comment?.post.id,
       user: r.user,
-      parentComment: {
+      RepliedTo: {
         id: r.comment?.id || null,
         content: r.comment?.content || null,
         user: r.comment?.user || null,

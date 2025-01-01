@@ -373,3 +373,97 @@ export const getAdminAnalytics = async ({ startDate, endDate, monthsForPosts = 6
         categoryMetrics,
     };
 };
+export async function getMonthlyAnalytics() {
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    // Fetch posts within the last 6 months with related data
+    const posts = await prisma.post.findMany({
+        where: {
+            createdAt: { gte: sixMonthsAgo },
+        },
+        select: {
+            id: true,
+            title: true,
+            views: true,
+            likes: { select: { id: true, createdAt: true } },
+            comments: {
+                select: {
+                    id: true,
+                    createdAt: true,
+                    replies: { select: { id: true, createdAt: true } },
+                },
+            },
+            createdAt: true,
+        },
+    });
+    const monthlyData = {};
+    const postAnalytics = [];
+    posts.forEach((post) => {
+        const postMonth = post.createdAt.toISOString().slice(0, 7); // Format: YYYY-MM
+        // Initialize monthly data if not present
+        if (!monthlyData[postMonth]) {
+            monthlyData[postMonth] = {
+                views: 0,
+                likes: 0,
+                comments: 0,
+                totalEngagement: 0,
+                replies: 0,
+                posts: 0,
+            };
+        }
+        // Aggregate monthly data
+        monthlyData[postMonth].views += post.views;
+        monthlyData[postMonth].likes += post.likes.length;
+        monthlyData[postMonth].comments += post.comments.length;
+        monthlyData[postMonth].replies += post.comments.reduce((acc, comment) => acc + comment.replies.length, 0);
+        monthlyData[postMonth].totalEngagement +=
+            post.views +
+                post.likes.length +
+                post.comments.length +
+                post.comments.reduce((acc, comment) => acc + comment.replies.length, 0);
+        monthlyData[postMonth].posts += 1;
+        // Add detailed post analytics
+        const likesCount = post.likes.length;
+        const commentsCount = post.comments.length;
+        const repliesCount = post.comments.reduce((acc, comment) => acc + comment.replies.length, 0);
+        const totalEngagement = post.views + likesCount + commentsCount + repliesCount;
+        postAnalytics.push({
+            postId: post.id,
+            title: post.title,
+            views: post.views,
+            likesCount,
+            commentsCount,
+            repliesCount,
+            totalEngagement,
+            createdAt: post.createdAt,
+        });
+    });
+    // Transform monthly data into a sorted array
+    const sortedMonths = Object.keys(monthlyData).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+    const monthlyAnalytics = sortedMonths.map((month) => ({
+        month,
+        ...monthlyData[month],
+    }));
+    // Calculate growth metrics
+    for (let i = 1; i < monthlyAnalytics.length; i++) {
+        const current = monthlyAnalytics[i];
+        const previous = monthlyAnalytics[i - 1];
+        current.viewsGrowth =
+            previous.views === 0
+                ? 0
+                : ((current.views - previous.views) / previous.views) * 100;
+        current.likesGrowth =
+            previous.likes === 0
+                ? 0
+                : ((current.likes - previous.likes) / previous.likes) * 100;
+        current.commentsGrowth =
+            previous.comments === 0
+                ? 0
+                : ((current.comments - previous.comments) / previous.comments) * 100;
+        current.repliesGrowth =
+            previous.replies === 0
+                ? 0
+                : ((current.replies - previous.replies) / previous.replies) * 100;
+    }
+    return { monthlyAnalytics, postAnalytics };
+}

@@ -6,6 +6,7 @@ import {
 } from "../middlewares/auth.js";
 import {
   getAdminOverview,
+  getAdminPostAnalytics,
   getPostAnalytics,
 } from "../controllers/analytic.controller.js";
 
@@ -18,5 +19,11 @@ router.get(
   getPostAnalytics
 );
 router.get("/admin-overview/:days", isAuthenticated, isAdmin, getAdminOverview);
+router.get(
+  "/admin-post-analytics",
+  isAuthenticated,
+  isAdmin,
+  getAdminPostAnalytics
+);
 
 export default router;

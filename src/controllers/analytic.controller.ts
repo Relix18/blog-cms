@@ -1,6 +1,10 @@
 import { NextFunction, Request, Response } from "express";
 import { TryCatch } from "../middlewares/error.js";
-import { getAllPostsAnalytics, getAdminAnalytics } from "../utils/analytics.js";
+import {
+  getAllPostsAnalytics,
+  getAdminAnalytics,
+  getMonthlyAnalytics,
+} from "../utils/analytics.js";
 import ErrorHandler from "../utils/errorHandler.js";
 
 export const getPostAnalytics = TryCatch(
@@ -37,6 +41,17 @@ export const getAdminOverview = TryCatch(
     res.status(200).json({
       success: true,
       overview,
+    });
+  }
+);
+
+export const getAdminPostAnalytics = TryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const PostAnalytics = await getMonthlyAnalytics();
+
+    res.status(200).json({
+      success: true,
+      PostAnalytics,
     });
   }
 );

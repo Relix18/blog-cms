@@ -8,6 +8,7 @@ import {
   getAdminOverview,
   getAdminPostAnalytics,
   getPostAnalytics,
+  getUserAnalytics,
 } from "../controllers/analytic.controller.js";
 
 const router = express.Router();
@@ -25,5 +26,6 @@ router.get(
   isAdmin,
   getAdminPostAnalytics
 );
+router.get("/admin-user-analytics", isAuthenticated, isAdmin, getUserAnalytics);
 
 export default router;

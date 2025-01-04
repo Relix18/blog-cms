@@ -56,3 +56,58 @@ export interface ILike {
   userId: string;
   createdAt: Date;
 }
+
+export interface MonthlyMetrics {
+  month: string;
+  views: number;
+  likes: number;
+  comments: number;
+  replies: number;
+  posts: number;
+  totalEngagement: number;
+  viewsGrowth?: number;
+  likesGrowth?: number;
+  commentsGrowth?: number;
+  repliesGrowth?: number;
+}
+
+export interface PostAnalytics {
+  postId: number;
+  title: string;
+  views: number;
+  likes: number;
+  comments: number;
+  replies: number;
+  totalEngagement: number;
+  createdAt: Date;
+}
+
+export interface DetailedAnalytics {
+  monthlyAnalytics: MonthlyMetrics[];
+  postAnalytics: PostAnalytics[];
+}
+
+export interface MonthlyUserActivity {
+  month: string;
+  newUsers: number;
+  activeUsers: number;
+  interactions: {
+    views: number;
+    likes: number;
+    comments: number;
+    replies: number;
+  };
+  newAuthors: number;
+}
+
+export interface DetailedPlatformUserAnalytics {
+  totalUsers: number;
+  newUsers: number;
+  activeUsers: number;
+  authors: number;
+  monthlyActivity: MonthlyUserActivity[];
+  growthMetrics: {
+    userGrowthRate: number;
+    activeUserGrowthRate: number;
+  };
+}

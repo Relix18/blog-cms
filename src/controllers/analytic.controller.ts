@@ -3,7 +3,8 @@ import { TryCatch } from "../middlewares/error.js";
 import {
   getAllPostsAnalytics,
   getAdminAnalytics,
-  getMonthlyAnalytics,
+  getAdminAllPostAnalytics,
+  userAnalytics,
 } from "../utils/analytics.js";
 import ErrorHandler from "../utils/errorHandler.js";
 
@@ -47,11 +48,22 @@ export const getAdminOverview = TryCatch(
 
 export const getAdminPostAnalytics = TryCatch(
   async (req: Request, res: Response, next: NextFunction) => {
-    const PostAnalytics = await getMonthlyAnalytics();
+    const PostAnalytics = await getAdminAllPostAnalytics();
 
     res.status(200).json({
       success: true,
       PostAnalytics,
+    });
+  }
+);
+
+export const getUserAnalytics = TryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const UserAnalytics = await userAnalytics();
+
+    res.status(200).json({
+      success: true,
+      UserAnalytics,
     });
   }
 );

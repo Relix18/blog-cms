@@ -585,18 +585,7 @@ export async function userAnalytics(): Promise<DetailedPlatformUserAnalytics> {
     prisma.user.count({ where: { posts: { some: {} } } }),
   ]);
 
-  // Fetch active users and group by month
-  const activeUsersRaw = await prisma.user.findMany({
-    where: {
-      OR: [
-        { posts: { some: { likes: { some: {} } } } },
-        { posts: { some: { comments: { some: {} } } } },
-      ],
-      createdAt: { gte: sixMonthsAgo },
-    },
-    select: { id: true, createdAt: true },
-  });
-
+  // Initialize monthly data
   const monthlyActivity: MonthlyUserActivity[] = Array.from({ length: 6 }).map(
     (_, i) => {
       const month = new Date();
@@ -618,66 +607,97 @@ export async function userAnalytics(): Promise<DetailedPlatformUserAnalytics> {
     }
   );
 
+  // Fetch and group interactions
+  const posts = await prisma.post.findMany({
+    where: { createdAt: { gte: sixMonthsAgo } },
+    select: {
+      views: true,
+      createdAt: true,
+      likes: { select: { userId: true, createdAt: true } },
+      comments: {
+        select: {
+          userId: true,
+          createdAt: true,
+          replies: { select: { userId: true, createdAt: true } },
+        },
+      },
+    },
+  });
+
+  // Create a map to track active users per month
+  const activeUsersPerMonth: Record<string, Set<string>> = {};
+  monthlyActivity.forEach((m) => {
+    activeUsersPerMonth[m.month] = new Set();
+  });
+
+  posts.forEach((post) => {
+    const postCreatedMonth = post.createdAt.toISOString().slice(0, 7);
+    const monthData = monthlyActivity.find((m) => m.month === postCreatedMonth);
+
+    // Add views to the post's created month
+    if (monthData) {
+      monthData.interactions.views += post.views;
+    }
+
+    // Process likes
+    post.likes.forEach((like) => {
+      const monthKey = like.createdAt.toISOString().slice(0, 7);
+      const monthData = monthlyActivity.find((m) => m.month === monthKey);
+      if (monthData) {
+        monthData.interactions.likes++;
+        activeUsersPerMonth[monthKey].add(like.userId);
+      }
+    });
+
+    // Process comments and replies
+    post.comments.forEach((comment) => {
+      const commentMonth = comment.createdAt.toISOString().slice(0, 7);
+      const monthData = monthlyActivity.find((m) => m.month === commentMonth);
+      if (monthData) {
+        monthData.interactions.comments++;
+        activeUsersPerMonth[commentMonth].add(comment.userId);
+      }
+
+      comment.replies.forEach((reply) => {
+        const replyMonth = reply.createdAt.toISOString().slice(0, 7);
+        const monthData = monthlyActivity.find((m) => m.month === replyMonth);
+        if (monthData) {
+          monthData.interactions.replies++;
+          activeUsersPerMonth[replyMonth].add(reply.userId);
+        }
+      });
+    });
+  });
+
+  // Populate active users count
+  Object.entries(activeUsersPerMonth).forEach(([month, users]) => {
+    const monthData = monthlyActivity.find((m) => m.month === month);
+    if (monthData) {
+      monthData.activeUsers = users.size; // Count unique users for the month
+    }
+  });
+
+  // Populate new users
   const monthlyNewUsersRaw = await prisma.user.groupBy({
     by: ["createdAt"],
     where: { createdAt: { gte: sixMonthsAgo } },
     _count: { createdAt: true },
   });
 
-  const monthlyInteractionsRaw = await prisma.post.findMany({
-    where: { createdAt: { gte: sixMonthsAgo } },
-    select: {
-      createdAt: true,
-      views: true,
-      likes: true,
-      comments: { select: { replies: true } },
-    },
-  });
-
-  // Populate monthly activity
   monthlyNewUsersRaw.forEach(({ createdAt, _count }) => {
     const monthKey = createdAt.toISOString().slice(0, 7);
     const monthData = monthlyActivity.find((m) => m.month === monthKey);
     if (monthData) monthData.newUsers += _count.createdAt;
   });
 
-  monthlyInteractionsRaw.forEach((post) => {
-    const monthKey = post.createdAt.toISOString().slice(0, 7);
-    const monthData = monthlyActivity.find((m) => m.month === monthKey);
-    if (monthData) {
-      monthData.interactions.views += post.views;
-      monthData.interactions.likes += post.likes.length;
-      monthData.interactions.comments += post.comments.length;
-      monthData.interactions.replies += post.comments.reduce(
-        (acc, c) => acc + c.replies.length,
-        0
-      );
-    }
-  });
-
-  const firstMonth = monthlyActivity[0];
-  const lastMonth = monthlyActivity[monthlyActivity.length - 1];
-  const userGrowthRate =
-    firstMonth.newUsers === 0 && lastMonth.newUsers === 0
-      ? 0
-      : firstMonth.newUsers
-      ? ((lastMonth.newUsers - firstMonth.newUsers) / firstMonth.newUsers) * 100
-      : 0;
-  const activeUserGrowthRate =
-    firstMonth.activeUsers === 0 && lastMonth.activeUsers === 0
-      ? 0
-      : firstMonth.activeUsers
-      ? ((lastMonth.activeUsers - firstMonth.activeUsers) /
-          firstMonth.activeUsers) *
-        100
-      : 0;
-
   return {
     totalUsers,
     newUsers,
-    activeUsers: activeUsersRaw.length,
+    activeUsers: Object.values(activeUsersPerMonth).reduce(
+      (acc, users) => acc + users.size,
+      0
+    ),
     authors,
     monthlyActivity,
-    growthMetrics: { userGrowthRate, activeUserGrowthRate },
   };
 }

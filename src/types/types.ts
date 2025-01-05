@@ -106,8 +106,4 @@ export interface DetailedPlatformUserAnalytics {
   activeUsers: number;
   authors: number;
   monthlyActivity: MonthlyUserActivity[];
-  growthMetrics: {
-    userGrowthRate: number;
-    activeUserGrowthRate: number;
-  };
 }

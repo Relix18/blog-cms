@@ -1,5 +1,5 @@
 import { TryCatch } from "../middlewares/error.js";
-import { getAllPostsAnalytics, getAdminAnalytics, getAdminAllPostAnalytics, userAnalytics, } from "../utils/analytics.js";
+import { getAllPostsAnalytics, getAdminAnalytics, getAdminAllPostAnalytics, userAnalytics, growthReports, } from "../utils/analytics.js";
 import ErrorHandler from "../utils/errorHandler.js";
 export const getPostAnalytics = TryCatch(async (req, res, next) => {
     const days = req.params.days;
@@ -38,5 +38,12 @@ export const getUserAnalytics = TryCatch(async (req, res, next) => {
     res.status(200).json({
         success: true,
         UserAnalytics,
+    });
+});
+export const getGrowthReports = TryCatch(async (req, res, next) => {
+    const GrowthReport = await growthReports();
+    res.status(200).json({
+        success: true,
+        GrowthReport,
     });
 });

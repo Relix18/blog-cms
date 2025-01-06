@@ -7,6 +7,7 @@ import {
 import {
   getAdminOverview,
   getAdminPostAnalytics,
+  getGrowthReports,
   getPostAnalytics,
   getUserAnalytics,
 } from "../controllers/analytic.controller.js";
@@ -27,5 +28,6 @@ router.get(
   getAdminPostAnalytics
 );
 router.get("/admin-user-analytics", isAuthenticated, isAdmin, getUserAnalytics);
+router.get("/admin-growth-reports", isAuthenticated, isAdmin, getGrowthReports);
 
 export default router;

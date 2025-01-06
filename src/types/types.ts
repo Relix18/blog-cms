@@ -108,3 +108,9 @@ export interface DetailedPlatformUserAnalytics {
   monthlyActivity: MonthlyUserActivity[];
   allMonthlyActivity: MonthlyUserActivity[];
 }
+
+export type GrowthReport = {
+  month: string;
+  count: number;
+  growthRate: number | null;
+};

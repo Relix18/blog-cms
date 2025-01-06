@@ -5,6 +5,7 @@ import {
   getAdminAnalytics,
   getAdminAllPostAnalytics,
   userAnalytics,
+  growthReports,
 } from "../utils/analytics.js";
 import ErrorHandler from "../utils/errorHandler.js";
 
@@ -64,6 +65,17 @@ export const getUserAnalytics = TryCatch(
     res.status(200).json({
       success: true,
       UserAnalytics,
+    });
+  }
+);
+
+export const getGrowthReports = TryCatch(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const GrowthReport = await growthReports();
+
+    res.status(200).json({
+      success: true,
+      GrowthReport,
     });
   }
 );

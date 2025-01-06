@@ -556,3 +556,35 @@ export async function userAnalytics() {
         monthlyActivity,
     };
 }
+export async function growthReports() {
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const [posts, users] = await Promise.all([
+        prisma.post.findMany({
+            where: { createdAt: { gte: sixMonthsAgo } },
+            select: { createdAt: true },
+        }),
+        prisma.user.findMany({
+            where: { createdAt: { gte: sixMonthsAgo } },
+            select: { createdAt: true },
+        }),
+    ]);
+    const processGrowth = (items) => {
+        const growthData = {};
+        items.forEach((item) => {
+            const monthKey = item.createdAt.toISOString().slice(0, 7); // Format as YYYY-MM
+            growthData[monthKey] = (growthData[monthKey] || 0) + 1;
+        });
+        const sortedMonths = Object.keys(growthData).sort();
+        const monthlyGrowth = sortedMonths.map((month, index) => {
+            const count = growthData[month];
+            const previousCount = index > 0 ? growthData[sortedMonths[index - 1]] : 0;
+            const growthRate = previousCount > 0 ? ((count - previousCount) / previousCount) * 100 : 0;
+            return { month, count, growthRate };
+        });
+        return monthlyGrowth;
+    };
+    const userGrowth = processGrowth(users);
+    const postGrowth = processGrowth(posts);
+    return { userGrowth, postGrowth };
+}

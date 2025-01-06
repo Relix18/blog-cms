@@ -106,4 +106,5 @@ export interface DetailedPlatformUserAnalytics {
   activeUsers: number;
   authors: number;
   monthlyActivity: MonthlyUserActivity[];
+  allMonthlyActivity: MonthlyUserActivity[];
 }

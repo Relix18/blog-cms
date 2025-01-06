@@ -575,41 +575,13 @@ export async function getAdminAllPostAnalytics(): Promise<DetailedAnalytics> {
 }
 
 export async function userAnalytics(): Promise<DetailedPlatformUserAnalytics> {
-  const sixMonthsAgo = new Date();
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-
-  // Fetch basic stats
   const [totalUsers, newUsers, authors] = await Promise.all([
     prisma.user.count(),
-    prisma.user.count({ where: { createdAt: { gte: sixMonthsAgo } } }),
+    prisma.user.count(),
     prisma.user.count({ where: { posts: { some: {} } } }),
   ]);
 
-  // Initialize monthly data
-  const monthlyActivity: MonthlyUserActivity[] = Array.from({ length: 6 }).map(
-    (_, i) => {
-      const month = new Date();
-      month.setMonth(month.getMonth() - (5 - i));
-      const monthKey = month.toISOString().slice(0, 7); // Format YYYY-MM
-
-      return {
-        month: monthKey,
-        newUsers: 0,
-        activeUsers: 0,
-        interactions: {
-          views: 0,
-          likes: 0,
-          comments: 0,
-          replies: 0,
-        },
-        newAuthors: 0,
-      };
-    }
-  );
-
-  // Fetch and group interactions
   const posts = await prisma.post.findMany({
-    where: { createdAt: { gte: sixMonthsAgo } },
     select: {
       views: true,
       createdAt: true,
@@ -624,71 +596,76 @@ export async function userAnalytics(): Promise<DetailedPlatformUserAnalytics> {
     },
   });
 
-  // Create a map to track active users per month
+  const allMonthlyActivity: MonthlyUserActivity[] = [];
   const activeUsersPerMonth: Record<string, Set<string>> = {};
-  monthlyActivity.forEach((m) => {
-    activeUsersPerMonth[m.month] = new Set();
-  });
+
+  const ensureMonthExists = (monthKey: string) => {
+    let monthData = allMonthlyActivity.find((m) => m.month === monthKey);
+    if (!monthData) {
+      monthData = {
+        month: monthKey,
+        newUsers: 0,
+        activeUsers: 0,
+        interactions: {
+          views: 0,
+          likes: 0,
+          comments: 0,
+          replies: 0,
+        },
+        newAuthors: 0,
+      };
+      allMonthlyActivity.push(monthData);
+      activeUsersPerMonth[monthKey] = new Set();
+    }
+    return monthData;
+  };
 
   posts.forEach((post) => {
     const postCreatedMonth = post.createdAt.toISOString().slice(0, 7);
-    const monthData = monthlyActivity.find((m) => m.month === postCreatedMonth);
+    const monthData = ensureMonthExists(postCreatedMonth);
 
-    // Add views to the post's created month
-    if (monthData) {
-      monthData.interactions.views += post.views;
-    }
+    monthData.interactions.views += post.views;
 
-    // Process likes
     post.likes.forEach((like) => {
       const monthKey = like.createdAt.toISOString().slice(0, 7);
-      const monthData = monthlyActivity.find((m) => m.month === monthKey);
-      if (monthData) {
-        monthData.interactions.likes++;
-        activeUsersPerMonth[monthKey].add(like.userId);
-      }
+      const monthData = ensureMonthExists(monthKey);
+      monthData.interactions.likes++;
+      activeUsersPerMonth[monthKey].add(like.userId);
     });
 
-    // Process comments and replies
     post.comments.forEach((comment) => {
       const commentMonth = comment.createdAt.toISOString().slice(0, 7);
-      const monthData = monthlyActivity.find((m) => m.month === commentMonth);
-      if (monthData) {
-        monthData.interactions.comments++;
-        activeUsersPerMonth[commentMonth].add(comment.userId);
-      }
+      const monthData = ensureMonthExists(commentMonth);
+      monthData.interactions.comments++;
+      activeUsersPerMonth[commentMonth].add(comment.userId);
 
       comment.replies.forEach((reply) => {
         const replyMonth = reply.createdAt.toISOString().slice(0, 7);
-        const monthData = monthlyActivity.find((m) => m.month === replyMonth);
-        if (monthData) {
-          monthData.interactions.replies++;
-          activeUsersPerMonth[replyMonth].add(reply.userId);
-        }
+        const monthData = ensureMonthExists(replyMonth);
+        monthData.interactions.replies++;
+        activeUsersPerMonth[replyMonth].add(reply.userId);
       });
     });
   });
 
-  // Populate active users count
   Object.entries(activeUsersPerMonth).forEach(([month, users]) => {
-    const monthData = monthlyActivity.find((m) => m.month === month);
-    if (monthData) {
-      monthData.activeUsers = users.size; // Count unique users for the month
-    }
+    const monthData = ensureMonthExists(month);
+    monthData.activeUsers = users.size;
   });
 
-  // Populate new users
   const monthlyNewUsersRaw = await prisma.user.groupBy({
     by: ["createdAt"],
-    where: { createdAt: { gte: sixMonthsAgo } },
     _count: { createdAt: true },
   });
 
   monthlyNewUsersRaw.forEach(({ createdAt, _count }) => {
     const monthKey = createdAt.toISOString().slice(0, 7);
-    const monthData = monthlyActivity.find((m) => m.month === monthKey);
-    if (monthData) monthData.newUsers += _count.createdAt;
+    const monthData = ensureMonthExists(monthKey);
+    monthData.newUsers += _count.createdAt;
   });
+
+  allMonthlyActivity.sort((a, b) => a.month.localeCompare(b.month));
+  const monthlyActivity = allMonthlyActivity.slice(-6);
 
   return {
     totalUsers,
@@ -698,6 +675,7 @@ export async function userAnalytics(): Promise<DetailedPlatformUserAnalytics> {
       0
     ),
     authors,
+    allMonthlyActivity,
     monthlyActivity,
   };
 }

@@ -1,0 +1,12 @@
+model SiteSettings {
+  id                   String   @id @default(cuid())
+  siteName             String
+  logoUrl              String? 
+  logoUrlId            String? 
+  accentColor          String?  
+  heroImageUrl         String? 
+  heroImageUrlId         String? 
+  gradientBackground   String  
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}

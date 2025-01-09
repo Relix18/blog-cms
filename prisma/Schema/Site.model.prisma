@@ -4,9 +4,12 @@ model SiteSettings {
   logoUrl              String? 
   logoUrlId            String? 
   accentColor          String?  
+  heroTitle            String
+  heroDescription      String
   heroImageUrl         String? 
-  heroImageUrlId         String? 
-  gradientBackground   String  
+  heroImageUrlId       String? 
+  gradientStart        String  
+  gradientEnd          String  
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 }

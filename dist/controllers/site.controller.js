@@ -1,69 +1,74 @@
-import prisma from "../lib/db";
-import { TryCatch } from "../middlewares/error";
-import ErrorHandler from "../utils/errorHandler";
+import prisma from "../lib/db.js";
+import { TryCatch } from "../middlewares/error.js";
+import ErrorHandler from "../utils/errorHandler.js";
 import { v2 as cloudinary } from "cloudinary";
 export const createSiteSettings = TryCatch(async (req, res, next) => {
-    const { logo, name, accentColor, heroImage, gradientBackground } = req.body;
-    if (!logo || !name || !accentColor || !gradientBackground) {
-        return next(new ErrorHandler(400, "All field is required"));
+    const { logo, name, heroTitle, heroDescription, accentColor, heroImage, gradientStart, gradientEnd, } = req.body;
+    if (!logo ||
+        !name ||
+        !heroTitle ||
+        !heroDescription ||
+        !accentColor ||
+        !gradientStart ||
+        !gradientEnd) {
+        return next(new ErrorHandler(400, "All fields are required"));
     }
-    let logoUrl;
-    let logoUrlId;
     try {
-        const myCloud = await cloudinary.uploader.upload(logo, {
+        const logoUpload = await cloudinary.uploader.upload(logo, {
             folder: "blog/site",
             crop: "scale",
         });
-        logoUrl = myCloud.secure_url;
-        logoUrlId = myCloud.public_id;
-    }
-    catch (error) {
-        return next(new ErrorHandler(400, "An error occurred"));
-    }
-    if (heroImage) {
-        try {
-            const myCloud = await cloudinary.uploader.upload(heroImage, {
+        let heroImageData = {};
+        if (heroImage) {
+            const heroUpload = await cloudinary.uploader.upload(heroImage, {
                 folder: "blog/site",
                 crop: "scale",
             });
-            const heroUrl = myCloud.secure_url;
-            const heroUrlId = myCloud.public_id;
-            await prisma.siteSettings.create({
-                data: {
-                    siteName: name,
-                    logoUrl,
-                    logoUrlId,
-                    accentColor,
-                    gradientBackground,
-                    heroImageUrl: heroUrl,
-                    heroImageUrlId: heroUrlId,
-                },
-            });
+            heroImageData = {
+                heroImageUrl: heroUpload.secure_url,
+                heroImageUrlId: heroUpload.public_id,
+            };
         }
-        catch (error) {
-            return next(new ErrorHandler(400, "An error occurred"));
-        }
-    }
-    else {
         await prisma.siteSettings.create({
             data: {
                 siteName: name,
-                logoUrl,
-                logoUrlId,
+                heroTitle,
+                heroDescription,
+                logoUrl: logoUpload.secure_url,
+                logoUrlId: logoUpload.public_id,
                 accentColor,
-                gradientBackground,
+                gradientStart,
+                gradientEnd,
+                ...heroImageData,
             },
         });
+        res.status(200).json({
+            success: true,
+            message: "Site Settings has been created successfully.",
+        });
     }
+    catch (error) {
+        return next(new ErrorHandler(500, "An error occurred while creating site settings"));
+    }
+});
+export const getSiteSettings = TryCatch(async (req, res, next) => {
+    const siteSettings = await prisma.siteSettings.findFirst();
     res.status(200).json({
         success: true,
-        message: "Site Settings has been created successfully.",
+        siteSettings,
     });
 });
 export const updateSiteSettings = TryCatch(async (req, res, next) => {
-    const { settingId, logo, name, accentColor, gradientBackground } = req.body;
-    if (!settingId || !logo || !name || !accentColor || !gradientBackground) {
-        return next(new ErrorHandler(400, "All field is required"));
+    const { settingId, heroTitle, heroDescription, logo, name, accentColor, gradientStart, gradientEnd, heroImage, } = req.body;
+    if (!settingId ||
+        !heroTitle ||
+        !heroDescription ||
+        !logo ||
+        !name ||
+        !accentColor ||
+        !gradientStart ||
+        !gradientEnd) {
+        return next(new ErrorHandler(400, "All fields are required"));
     }
     const settings = await prisma.siteSettings.findUnique({
         where: { id: settingId },
@@ -71,69 +76,49 @@ export const updateSiteSettings = TryCatch(async (req, res, next) => {
     if (!settings) {
         return next(new ErrorHandler(404, "Settings not found."));
     }
-    let logoUrl;
-    let logoUrlId;
+    let logoUrl = settings.logoUrl;
+    let logoUrlId = settings.logoUrlId;
     if (!logo.startsWith("https://res.cloudinary.com")) {
-        await cloudinary.uploader.destroy(settings?.logoUrlId);
-        const myCloud = await cloudinary.uploader.upload(logo, {
+        if (settings.logoUrlId) {
+            await cloudinary.uploader.destroy(settings.logoUrlId);
+        }
+        const uploadedLogo = await cloudinary.uploader.upload(logo, {
             folder: "blog/site",
             crop: "scale",
         });
-        logoUrl = myCloud.secure_url;
-        logoUrlId = myCloud.public_id;
+        logoUrl = uploadedLogo.secure_url;
+        logoUrlId = uploadedLogo.public_id;
     }
-    await prisma.siteSettings.create({
+    let heroImageUrl = settings.heroImageUrl;
+    let heroImageUrlId = settings.heroImageUrlId;
+    if (heroImage) {
+        if (settings.heroImageUrlId) {
+            await cloudinary.uploader.destroy(settings.heroImageUrlId);
+        }
+        const uploadedHeroImage = await cloudinary.uploader.upload(heroImage, {
+            folder: "blog/site",
+            crop: "scale",
+        });
+        heroImageUrl = uploadedHeroImage.secure_url;
+        heroImageUrlId = uploadedHeroImage.public_id;
+    }
+    await prisma.siteSettings.update({
+        where: { id: settingId },
         data: {
             siteName: name,
+            heroTitle,
+            heroDescription,
             logoUrl,
             logoUrlId,
             accentColor,
-            gradientBackground,
-        },
-    });
-    res.status(200).json({
-        success: true,
-        message: "Site Settings has been updated successfully.",
-    });
-});
-export const updateSiteHeroImage = TryCatch(async (req, res, next) => {
-    const { id, image } = req.body;
-    const settings = await prisma.siteSettings.findUnique({
-        where: { id },
-    });
-    if (!settings) {
-        return next(new ErrorHandler(404, "Settings not found."));
-    }
-    let heroImageUrl;
-    let heroImageUrlId;
-    if (settings?.heroImageUrl) {
-        if (settings?.heroImageUrlId) {
-            await cloudinary.uploader.destroy(settings.heroImageUrlId);
-        }
-        const myCloud = await cloudinary.uploader.upload(image, {
-            folder: "blog/avatar",
-            crop: "scale",
-        });
-        heroImageUrl = myCloud.secure_url;
-        heroImageUrlId = myCloud.public_id;
-    }
-    else {
-        const myCloud = await cloudinary.uploader.upload(avatar, {
-            folder: "blog/avatar",
-            crop: "scale",
-        });
-        heroImageUrl = myCloud.secure_url;
-        heroImageUrlId = myCloud.public_id;
-    }
-    await prisma.siteSettings.update({
-        where: { id },
-        data: {
+            gradientStart,
+            gradientEnd,
             heroImageUrl,
             heroImageUrlId,
         },
     });
     res.status(200).json({
         success: true,
-        message: "Image updated successfully",
+        message: "Site settings updated successfully.",
     });
 });

@@ -59,19 +59,19 @@ export const getSiteSettings = TryCatch(async (req, res, next) => {
     });
 });
 export const updateSiteSettings = TryCatch(async (req, res, next) => {
-    const { settingId, heroTitle, heroDescription, logo, name, accentColor, gradientStart, gradientEnd, heroImage, } = req.body;
-    if (!settingId ||
+    const { id, heroTitle, heroDescription, logo, siteName, accentColor, gradientStart, gradientEnd, heroImage, } = req.body;
+    if (!id ||
         !heroTitle ||
         !heroDescription ||
         !logo ||
-        !name ||
+        !siteName ||
         !accentColor ||
         !gradientStart ||
         !gradientEnd) {
         return next(new ErrorHandler(400, "All fields are required"));
     }
     const settings = await prisma.siteSettings.findUnique({
-        where: { id: settingId },
+        where: { id },
     });
     if (!settings) {
         return next(new ErrorHandler(404, "Settings not found."));
@@ -102,10 +102,17 @@ export const updateSiteSettings = TryCatch(async (req, res, next) => {
         heroImageUrl = uploadedHeroImage.secure_url;
         heroImageUrlId = uploadedHeroImage.public_id;
     }
+    else {
+        if (settings.heroImageUrlId) {
+            await cloudinary.uploader.destroy(settings.heroImageUrlId);
+            heroImageUrl = null;
+            heroImageUrlId = null;
+        }
+    }
     await prisma.siteSettings.update({
-        where: { id: settingId },
+        where: { id },
         data: {
-            siteName: name,
+            siteName,
             heroTitle,
             heroDescription,
             logoUrl,

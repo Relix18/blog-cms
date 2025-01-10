@@ -87,11 +87,11 @@ export const getSiteSettings = TryCatch(
 export const updateSiteSettings = TryCatch(
   async (req: Request, res: Response, next: NextFunction) => {
     const {
-      settingId,
+      id,
       heroTitle,
       heroDescription,
       logo,
-      name,
+      siteName,
       accentColor,
       gradientStart,
       gradientEnd,
@@ -99,11 +99,11 @@ export const updateSiteSettings = TryCatch(
     } = req.body;
 
     if (
-      !settingId ||
+      !id ||
       !heroTitle ||
       !heroDescription ||
       !logo ||
-      !name ||
+      !siteName ||
       !accentColor ||
       !gradientStart ||
       !gradientEnd
@@ -112,7 +112,7 @@ export const updateSiteSettings = TryCatch(
     }
 
     const settings = await prisma.siteSettings.findUnique({
-      where: { id: settingId },
+      where: { id },
     });
 
     if (!settings) {
@@ -147,12 +147,18 @@ export const updateSiteSettings = TryCatch(
       });
       heroImageUrl = uploadedHeroImage.secure_url;
       heroImageUrlId = uploadedHeroImage.public_id;
+    } else {
+      if (settings.heroImageUrlId) {
+        await cloudinary.uploader.destroy(settings.heroImageUrlId);
+        heroImageUrl = null;
+        heroImageUrlId = null;
+      }
     }
 
     await prisma.siteSettings.update({
-      where: { id: settingId },
+      where: { id },
       data: {
-        siteName: name,
+        siteName,
         heroTitle,
         heroDescription,
         logoUrl,

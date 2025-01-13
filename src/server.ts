@@ -1,6 +1,9 @@
 import { app, envMode } from "./app.js";
 import dotenv from "dotenv";
 import { v2 as cloudinary } from "cloudinary";
+import http from "http";
+import { initSocketServer } from "./socketServer.js";
+const socketServer = http.createServer(app);
 
 dotenv.config({ path: "./.env" });
 
@@ -18,7 +21,9 @@ process.on("uncaughtException", (err) => {
   process.exit(1);
 });
 
-const server = app.listen(port, () =>
+initSocketServer(socketServer);
+
+const server = socketServer.listen(port, () =>
   console.log("Server is working on Port:" + port + " in " + envMode + " Mode.")
 );
 

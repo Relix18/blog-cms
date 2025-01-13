@@ -31,28 +31,34 @@
         margin: 0;
         color: #c026d3;
       }
-      .content {
+      .email-body {
         padding: 20px;
       }
-      .content h2 {
+      .email-body h2 {
         font-size: 20px;
-        color: #444;
+        margin-top: 0;
       }
-      .content p {
+      .email-body p {
         font-size: 16px;
         line-height: 1.5;
-        color: #666;
       }
-      .content .details {
-        margin: 20px 0;
-        padding: 15px;
-        background-color: #f9f9f9;
-        border: 1px solid #eaeaea;
-        border-radius: 8px;
+      .email-footer {
+        text-align: center;
+        font-size: 14px;
+        color: #999;
+        padding: 10px;
       }
-      .details p {
-        margin: 5px 0;
+      .btn {
+        display: inline-block;
+        background-color: #c026d3;
+        color: #fff;
+        text-decoration: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        font-size: 16px;
+        margin-top: 20px;
       }
+
       .footer {
         margin-top: 30px;
         text-align: center;
@@ -66,22 +72,32 @@
       <div class="header">
         <h1><%=siteName%></h1>
       </div>
-      <div class="content">
-        <h2>New Author Request</h2>
-        <p>Dear Admin,</p>
+
+      <div class="email-body">
+        <h2>Hello <%= name %>,</h2>
         <p>
-          A user has submitted a request to become an author on <%=siteName%>.
-          Below are their details:
+          We are thrilled to inform you that your request to become an author on
+          <strong><%=siteName%></strong> has been approved!
         </p>
-        <div class="details">
-          <p><strong>Full Name:</strong> <%= name %></p>
-          <p><strong>Email Address:</strong> <%= email %></p>
-          <p><strong>Reason for Request:</strong></p>
-          <p><em><%= userReason %></em></p>
-        </div>
         <p>
-          Please review this request and take appropriate action. You can
-          approve or decline the request in the admin dashboard.
+          As an author, you now have access to your author dashboard, where you
+          can create, edit, and manage your posts. We are excited to see your
+          contributions to our platform and share your unique voice with our
+          audience.
+        </p>
+        <p>
+          To get started, click the button below to log in to your dashboard:
+        </p>
+        <p style="text-align: center">
+          <a href="<%= dashboardUrl %>" class="btn">Go to Dashboard</a>
+        </p>
+        <p>
+          If you have any questions or need assistance, feel free to reach out
+          to us. We’re here to support you every step of the way.
+        </p>
+        <p>
+          Happy blogging!<br />
+          The <%=siteName%> Team
         </p>
       </div>
       <div class="footer">

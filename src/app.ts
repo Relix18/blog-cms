@@ -9,6 +9,7 @@ import post from "./routes/post.route.js";
 import feature from "./routes/feature.route.js";
 import analytics from "./routes/analytics.route.js";
 import site from "./routes/site.route.js";
+import notification from "./routes/notification.route.js";
 
 dotenv.config({ path: "./.env" });
 
@@ -31,6 +32,7 @@ app.use("/api/v1", post);
 app.use("/api/v1", feature);
 app.use("/api/v1", analytics);
 app.use("/api/v1", site);
+app.use("/api/v1", notification);
 
 app.get("*", (req, res) => {
   res.status(404).json({

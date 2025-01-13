@@ -27,7 +27,12 @@ export const register = TryCatch(async (req, res, next) => {
     const option = {
         expires: new Date(Date.now() + 60 * 60 * 1000),
     };
-    const data = { user: { name: user.name }, otp };
+    const settings = await prisma.siteSettings.findFirst({});
+    const data = {
+        siteName: settings?.siteName,
+        user: { name: user.name },
+        otp,
+    };
     try {
         await sendEmail({
             email: user.email,
@@ -121,7 +126,12 @@ export const resendOtp = TryCatch(async (req, res, next) => {
         sameSite: "strict",
         maxAge: 60 * 60 * 1000,
     });
-    const data = { user: { name: user.name }, otp };
+    const settings = await prisma.siteSettings.findFirst({});
+    const data = {
+        siteName: settings?.siteName,
+        user: { name: user.name },
+        otp,
+    };
     try {
         await sendEmail({
             email: user.email,
@@ -279,7 +289,8 @@ export const forgotPassword = TryCatch(async (req, res, next) => {
         },
     });
     const resetPasswordLink = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
-    const data = { link: resetPasswordLink };
+    const settings = await prisma.siteSettings.findFirst({});
+    const data = { siteName: settings?.siteName, link: resetPasswordLink };
     try {
         await sendEmail({
             email: user.email,
@@ -483,12 +494,30 @@ export const authorRequest = TryCatch(async (req, res, next) => {
         return next(new ErrorHandler(404, "User not found."));
     }
     const reason = "I am passionate about writing and want to share my expertise in technology, programming, and personal growth. I believe my articles will provide valuable insights to the readers of Orbit Blog and contribute to building an engaging community. I would love the opportunity to inspire and educate others through your platform.";
-    const data = { name: user?.name, email: user?.email, userReason: reason };
-    //Notification
+    const settings = await prisma.siteSettings.findFirst({});
+    const data = {
+        siteName: settings?.siteName,
+        name: user?.name,
+        email: user?.email,
+        userReason: reason,
+    };
+    const isNotified = await prisma.notification.findFirst({
+        where: { userId: id, isRead: false },
+    });
+    if (isNotified) {
+        return next(new ErrorHandler(400, "Already requested. Please wait 24 hours."));
+    }
+    await prisma.notification.create({
+        data: {
+            title: "Author request",
+            message: `You have a new author request by ${user?.name}`,
+            userId: id,
+        },
+    });
     try {
         await sendEmail({
             email: process.env.ADMIN_MAIL || "",
-            subject: "New Author Request on Orbit Blog",
+            subject: `New Author Request on ${settings?.siteName}`,
             template: "author-request.ejs",
             data,
         });
@@ -624,6 +653,23 @@ export const updateRole = TryCatch(async (req, res, next) => {
             role,
         },
     });
+    const settings = await prisma.siteSettings.findFirst({});
+    const data = {
+        siteName: settings?.siteName,
+        name: user.name,
+        dashboardUrl: `${process.env.CLIENT_URL}/profile`,
+    };
+    try {
+        await sendEmail({
+            email: user.email,
+            subject: "Author request has been Approved",
+            template: "author-approved.ejs",
+            data,
+        });
+    }
+    catch (error) {
+        return next(new ErrorHandler(400, error));
+    }
     res.status(200).json({
         success: true,
         message: "Role updated successfully",

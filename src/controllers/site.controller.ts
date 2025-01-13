@@ -137,7 +137,7 @@ export const updateSiteSettings = TryCatch(
     let heroImageUrl = settings.heroImageUrl;
     let heroImageUrlId = settings.heroImageUrlId;
 
-    if (heroImage) {
+    if (heroImage && !heroImage.startsWith("https://res.cloudinary.com")) {
       if (settings.heroImageUrlId) {
         await cloudinary.uploader.destroy(settings.heroImageUrlId);
       }
@@ -147,12 +147,10 @@ export const updateSiteSettings = TryCatch(
       });
       heroImageUrl = uploadedHeroImage.secure_url;
       heroImageUrlId = uploadedHeroImage.public_id;
-    } else {
-      if (settings.heroImageUrlId) {
-        await cloudinary.uploader.destroy(settings.heroImageUrlId);
-        heroImageUrl = null;
-        heroImageUrlId = null;
-      }
+    } else if (!heroImage && settings.heroImageUrlId) {
+      await cloudinary.uploader.destroy(settings.heroImageUrlId);
+      heroImageUrl = null;
+      heroImageUrlId = null;
     }
 
     await prisma.siteSettings.update({

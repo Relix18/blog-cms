@@ -9,6 +9,7 @@ model User{
     comments Comment[]
     postLike Like[]
     reply Reply[]
+    notifications Notification[]
     profile Profile?
     resetPasswordToken String?
     resetPasswordExpire DateTime?
